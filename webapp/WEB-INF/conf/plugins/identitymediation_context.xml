@@ -4,6 +4,21 @@
        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
        xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans.xsd" >
 
+    <!-- IHttpTransportProvider declarations -->
+    <bean id="httpAccessTransport" class="fr.paris.lutece.plugins.identitystore.v3.web.service.HttpAccessTransport" />
 
+    <bean id="restTransport.httpAccess" class="fr.paris.lutece.plugins.identitystore.v3.web.rs.service.IdentityTransportRest">
+        <property name="IdentityStoreEndPoint">
+            <value>${identitymediation.identitystore.endpoint}</value>
+        </property>
+    </bean>
+
+    <!-- IdentityService impl -->
+    <bean id="identityService.rest.httpAccess" class="fr.paris.lutece.plugins.identitystore.v3.web.service.IdentityService">
+        <constructor-arg ref="restTransport.httpAccess"/>
+    </bean>
+
+    <!-- Cache -->
+    <bean id="identitymediation.serviceContractCache"  class="fr.paris.lutece.plugins.identitymediation.cache.ServiceContractCache"/>
 
 </beans>

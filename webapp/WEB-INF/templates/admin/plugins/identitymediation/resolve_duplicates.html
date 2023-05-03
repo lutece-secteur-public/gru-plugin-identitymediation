@@ -1,0 +1,72 @@
+<form class="form-inline" action="jsp/admin/plugins/identitymediation/IdentityDuplicate.jsp">
+    <@rowBox>
+        <@boxHeader i18nTitleKey="identitymediation.resolve_duplicates.title">
+            <@headerButtons>
+            </@headerButtons>
+        </@boxHeader>
+        <@boxBody>
+            <@messages infos=infos />
+            <@messages errors=errors />
+            <@messages warnings=warnings />
+
+            <#if service_contract??>
+                <@table>
+                    <tr>
+                        <th>&nbsp;</th>
+                        <th>
+                            <div class="col-12">#i18n{identitymediation.resolve_duplicates.identityToKeep}</div>
+                            <span class="quality-span">${identity.quality}</span> %
+                        </th>
+                        <#list potential_duplicate_list as duplicate>
+                            <th>
+                                <div class="col-12">#i18n{identitymediation.resolve_duplicates.identityToMerge}</div>
+                                <span class="quality-span">${duplicate.quality}</span> %
+                            </th>
+                        </#list>
+                    </tr>
+                    <@tableHeadBodySeparator />
+                    <#list service_contract.attributeDefinitions?filter(a -> a.attributeRight.readable) as readableAttr>
+                        <tr>
+                            <td>${readableAttr.name}</td>
+                            <td>
+                                <#list identity.attributes?filter(a -> a.key == readableAttr.keyName) as attr>
+                                    <span class="${attr.key}-value">${attr.value}</span>
+                                    <#if attr.certifier??>
+                                        <span class="badge badge-pill badge-info mx-1">${attr.certifier}</span>
+                                    </#if>
+                                    <#if attr.certificationDate??>
+                                        <span class="certification-date">${attr.certificationDate?date}</span>
+                                    </#if>
+                                </#list>
+                            </td>
+                            <#list potential_duplicate_list as duplicate>
+                                <td>
+                                    <#list duplicate.attributes?filter(a -> a.key == readableAttr.keyName) as attr>
+                                        <span class="${attr.key}-value">${attr.value}</span>
+                                        <#if attr.certifier??>
+                                            <span class="badge badge-pill badge-info mx-1">${attr.certifier}</span>
+                                        </#if>
+                                        <#if attr.certificationDate??>
+                                            <span class="certification-date">${attr.certificationDate?date}</span>
+                                        </#if>
+                                    </#list>
+                                </td>
+                            </#list>
+                        </tr>
+                    </#list>
+                    <tr>
+                        <td>&nbsp;</td>
+                        <td>&nbsp;</td>
+                        <#list potential_duplicate_list as duplicate>
+                            <td>
+                                <button type="button" class="btn btn-outline-warning action-btn select-identity-btn">
+                                    #i18n{identitymediation.resolve_duplicates.buttonSelectIdentity}
+                                </button>
+                            </td>
+                        </#list>
+                    </tr>
+                </@table>
+            </#if>
+        </@boxBody>
+    </@rowBox>
+</form>
