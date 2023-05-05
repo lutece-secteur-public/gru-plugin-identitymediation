@@ -25,7 +25,7 @@
                                     <#list identity.attributes?filter(a -> a.key == readableAttr.keyName) as attr>
                                         <span class="${attr.key}-value">${attr.value}</span>
                                         <#if attr.certifier??>
-                                            <span class="badge badge-pill badge-info mx-1">${attr.certifier}</span>
+                                            <span class="badge rounded-pill bg-info mx-1">${attr.certifier}</span>
                                         </#if>
                                         <#if attr.certificationDate??>
                                             <span class="certification-date">${attr.certificationDate?date}</span>

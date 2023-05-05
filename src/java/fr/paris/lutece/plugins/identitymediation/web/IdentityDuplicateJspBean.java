@@ -35,7 +35,12 @@ package fr.paris.lutece.plugins.identitymediation.web;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import fr.paris.lutece.plugins.identitymediation.cache.ServiceContractCache;
+import fr.paris.lutece.plugins.identitystore.v3.web.rs.dto.common.AuthorType;
+import fr.paris.lutece.plugins.identitystore.v3.web.rs.dto.common.RequestAuthor;
 import fr.paris.lutece.plugins.identitystore.v3.web.rs.dto.contract.ServiceContractDto;
+import fr.paris.lutece.plugins.identitystore.v3.web.rs.dto.crud.CertifiedAttribute;
+import fr.paris.lutece.plugins.identitystore.v3.web.rs.dto.crud.Identity;
+import fr.paris.lutece.plugins.identitystore.v3.web.rs.dto.crud.IdentityChangeRequest;
 import fr.paris.lutece.plugins.identitystore.v3.web.rs.dto.search.QualifiedIdentity;
 import fr.paris.lutece.plugins.identitystore.web.exception.IdentityStoreException;
 import fr.paris.lutece.portal.service.spring.SpringContextService;
@@ -43,15 +48,19 @@ import fr.paris.lutece.portal.service.util.AppLogService;
 import fr.paris.lutece.portal.service.util.AppPropertiesService;
 import fr.paris.lutece.portal.util.mvc.admin.MVCAdminJspBean;
 import fr.paris.lutece.portal.util.mvc.admin.annotations.Controller;
+import fr.paris.lutece.portal.util.mvc.commons.annotations.Action;
 import fr.paris.lutece.portal.util.mvc.commons.annotations.View;
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
 
 import javax.servlet.http.HttpServletRequest;
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.Date;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 /**
  * This class provides the user interface to manage identity duplicates (search, resolve)
@@ -70,6 +79,10 @@ public class IdentityDuplicateJspBean extends MVCAdminJspBean
     // Views
     private static final String VIEW_SEARCH_DUPLICATES = "searchDuplicates";
     private static final String VIEW_RESOLVE_DUPLICATES = "resolveDuplicates";
+
+    // Actions
+    private static final String ACTION_MERGE_DUPLICATE = "mergeDuplicate";
+    private static final String ACTION_EXCLUDE_DUPLICATE = "excludeDuplicate";
 
     // Templates
     private static final String TEMPLATE_SEARCH_DUPLICATES = "/admin/plugins/identitymediation/search_duplicates.html";
@@ -207,6 +220,42 @@ public class IdentityDuplicateJspBean extends MVCAdminJspBean
     }
 
     /**
+     * Merges the selected identity (the duplicate) with the previously selected identity (the main identity).
+     * 
+     * @param request
+     * @return
+     */
+    @Action( ACTION_MERGE_DUPLICATE )
+    public String doMergeDuplicate( HttpServletRequest request )
+    {
+        final String identityId = request.getParameter( "customer-id" );
+        final String duplicateId = request.getParameter( "duplicate-id" );
+        if ( StringUtils.isAnyBlank( identityId, duplicateId ) )
+        {
+            throw new RuntimeException( "error" ); // TODO
+        }
+        final IdentityChangeRequest identityChangeRequest = buildIdentityChangeRequest( request );
+        if ( identityChangeRequest != null )
+        {
+            // TODO send request
+        }
+        // TODO send merge duplicate request
+        return "";
+    }
+
+    /**
+     * Marks the selected identity (the potential duplicate) as NOT being a duplicate of the previously selected identity.
+     * 
+     * @param request
+     * @return
+     */
+    @Action( ACTION_EXCLUDE_DUPLICATE )
+    public String doExcludeDuplicate( HttpServletRequest request )
+    {
+        return "";
+    }
+
+    /**
      * Send an acknolegement to the backend to mark the identity as being currently resolved.
      * 
      * @param identity
@@ -223,7 +272,7 @@ public class IdentityDuplicateJspBean extends MVCAdminJspBean
      */
     private void sortDuplicatesByQuality( List<QualifiedIdentity> duplicates )
     {
-        duplicates.sort( Comparator.comparing( QualifiedIdentity::getQuality ).reversed() );
+        duplicates.sort( Comparator.comparing( QualifiedIdentity::getQuality ).reversed( ) );
     }
 
     /**
@@ -319,6 +368,47 @@ public class IdentityDuplicateJspBean extends MVCAdminJspBean
                 addError( MESSAGE_GET_SERVICE_CONTRACT_ERROR, getLocale( ) );
             }
         }
+    }
+
+    /**
+     * Build the update request in case of attributes taken from a duplicate.
+     * 
+     * @return the request ready to be sent, null if no update needed.
+     */
+    private IdentityChangeRequest buildIdentityChangeRequest( final HttpServletRequest request )
+    {
+        if ( request.getParameterMap( ).entrySet( ).stream( ).noneMatch( entry -> entry.getKey( ).startsWith( "override-" ) ) )
+        {
+            return null;
+        }
+        final IdentityChangeRequest changeRequest = new IdentityChangeRequest( );
+        final Identity identity = new Identity( );
+        identity.setCustomerId( request.getParameter( "customer-id" ) );
+        identity.setConnectionId( request.getParameter( "connection-id" ) );
+
+        request.getParameterMap( ).entrySet( ).stream( ).filter( entry -> entry.getKey( ).startsWith( "override-" ) && !entry.getKey( ).endsWith( "-certif" )
+                && !entry.getKey( ).endsWith( "-certiftimestamp" ) ).forEach( entry -> {
+                    final String key = entry.getKey( );
+                    final String value = entry.getValue( ) [0];
+                    final String certif = request.getParameter( key + "-certif" );
+                    final String timestamp = request.getParameter( key + "-certiftimestamp" );
+
+                    final CertifiedAttribute attr = new CertifiedAttribute( );
+                    attr.setKey( StringUtils.removeStart( key, "override-" ) );
+                    attr.setValue( value );
+                    attr.setCertificationProcess( certif );
+                    attr.setCertificationDate( new Date( Long.parseLong( timestamp ) ) );
+                    identity.getAttributes( ).add( attr );
+                } );
+
+        RequestAuthor author = new RequestAuthor( );
+        author.setName( getUser( ).getEmail( ) );
+        author.setType( AuthorType.application );
+
+        changeRequest.setIdentity( identity );
+        changeRequest.setOrigin( author );
+
+        return changeRequest;
     }
 
 }
