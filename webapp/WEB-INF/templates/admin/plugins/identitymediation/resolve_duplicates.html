@@ -7,6 +7,10 @@
         max-height: 0;
         max-width: 10px;
     }
+    span.non-matching-value {
+        font-weight: bold;
+        color: red;
+    }
 </style>
 <script type="text/javascript">
     $(function() {
@@ -15,6 +19,18 @@
         } else {
             $('div.action-box').hide();
         }
+
+        $('span[id^="main-"]').each(function() {
+            let value = $(this).text().trim().toUpperCase();
+            if (value) {
+                let key = $(this).prop('id').replace('main-', '');
+                $('span.'+key+'-value').each(function() {
+                    if ($(this).text().trim().toUpperCase() !== value) {
+                        $(this).addClass('non-matching-value');
+                    }
+                });
+            }
+        });
 
         $('button.select-identity-btn').click(function() {
             $('input[name="duplicate-id"]').val($(this).data('cuid'));
@@ -31,17 +47,21 @@
             $('input[name="override-' + key + '-certif"]').val(certif).prop("disabled", false);
             $('input[name="override-' + key + '-certiftimestamp"]').val(certiftimestamp).prop("disabled", false);
 
+            // Hide all arrows on this line.
             $(this).parents('tr').children('td').children('button.arrow-button').hide();
 
             $('td#' + key + '-main-td').append($('<div id="override-' + key + '-badge" class="badge bg-success" />'));
             $('div#override-' + key + '-badge').append($('<span/>').html(value))
                                                .append($('<span class="badge rounded-pill mx-1"/>').html(certif))
                                                .append($('<span class="certification-date"/>').html(certifdate))
+                                               // X button
                                                .append($('<button class="btn btn-danger ms-1 x-button"/>').html('<i class="ti ti-x" aria-hidden="true"></i>').click(function(){
                                                    $('input[name="override-' + key + '"]').val('').prop("disabled", true);
                                                    $('input[name="override-' + key + '-certif"]').val('').prop("disabled", true);
                                                    $('input[name="override-' + key + '-certiftimestamp"]').val('').prop("disabled", true);
+                                                   // Show the arrows again
                                                    $(this).parents('tr').children('td').children('button.arrow-button').show();
+                                                   // Remove the fetched attribute value
                                                    $('td#' + key + '-main-td').empty();
                                                }));
         });

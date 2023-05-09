@@ -75,6 +75,8 @@ public class IdentityDuplicateJspBean extends MVCAdminJspBean
     private static final String MESSAGE_GET_IDENTITY_ERROR = "identitymediation.message.get_identity.error";
     private static final String MESSAGE_FETCH_DUPLICATES_ERROR = "identitymediation.message.fetch_duplicates.error";
     private static final String MESSAGE_FETCH_DUPLICATES_NORESULT = "identitymediation.message.fetch_duplicates.noresult";
+    private static final String MESSAGE_MERGE_DUPLICATES_SUCCESS = "identitymediation.message.merge_duplicates.success";
+    private static final String MESSAGE_EXCLUDE_DUPLICATES_SUCCESS = "identitymediation.message.exclude_duplicates.success";
 
     // Views
     private static final String VIEW_SEARCH_DUPLICATES = "searchDuplicates";
@@ -240,7 +242,9 @@ public class IdentityDuplicateJspBean extends MVCAdminJspBean
             // TODO send request
         }
         // TODO send merge duplicate request
-        return "";
+
+        addInfo(MESSAGE_MERGE_DUPLICATES_SUCCESS, getLocale());
+        return getSearchDuplicates(request);
     }
 
     /**
@@ -252,7 +256,16 @@ public class IdentityDuplicateJspBean extends MVCAdminJspBean
     @Action( ACTION_EXCLUDE_DUPLICATE )
     public String doExcludeDuplicate( HttpServletRequest request )
     {
-        return "";
+        final String identityId = request.getParameter( "customer-id" );
+        final String duplicateId = request.getParameter( "duplicate-id" );
+        if ( StringUtils.isAnyBlank( identityId, duplicateId ) )
+        {
+            throw new RuntimeException( "error" ); // TODO
+        }
+        // TODO send exclude duplicate request
+
+        addInfo(MESSAGE_EXCLUDE_DUPLICATES_SUCCESS, getLocale());
+        return getSearchDuplicates(request);
     }
 
     /**
@@ -317,7 +330,7 @@ public class IdentityDuplicateJspBean extends MVCAdminJspBean
             final ObjectMapper mapper = new ObjectMapper( );
 
             list.add( mapper.readValue(
-                    "{\"scoring\":1,\"quality\":77,\"coverage\":66,\"connection_id\":\"mock-connection-id-3\",\"customer_id\":\"mock-cuid-3\",\"attributes\":[{\"key\":\"birthdate\",\"value\":\"22/11/1940\",\"type\":\"string\",\"certificationLevel\":300,\"certifier\":\"mail\",\"certificationDate\":\"2023-05-03\"},{\"key\":\"family_name\",\"value\":\"Durand\",\"type\":\"string\",\"certificationLevel\":700,\"certifier\":\"r2p\",\"certificationDate\":\"2023-05-03\"},{\"key\":\"first_name\",\"value\":\"Gille\",\"type\":\"string\",\"certificationLevel\":600,\"certifier\":\"agent\",\"certificationDate\":\"2023-05-03\"}]}",
+                    "{\"scoring\":1,\"quality\":77,\"coverage\":66,\"connection_id\":\"mock-connection-id-3\",\"customer_id\":\"mock-cuid-3\",\"attributes\":[{\"key\":\"birthdate\",\"value\":\"22/11/1940\",\"type\":\"string\",\"certificationLevel\":300,\"certifier\":\"mail\",\"certificationDate\":\"2023-05-03\"},{\"key\":\"family_name\",\"value\":\"Durand\",\"type\":\"string\",\"certificationLevel\":700,\"certifier\":\"r2p\",\"certificationDate\":\"2023-05-03\"},{\"key\":\"first_name\",\"value\":\"Gille\",\"type\":\"string\",\"certificationLevel\":600,\"certifier\":\"agent\",\"certificationDate\":\"2023-05-03\"},{\"key\":\"mobile_phone\",\"value\":\"06.66.32.89.01\",\"type\":\"string\",\"certificationLevel\":600,\"certifier\":\"sms\",\"certificationDate\":\"2023-05-03\"}]}",
                     QualifiedIdentity.class ) );
             list.add( mapper.readValue(
                     "{\"scoring\":1,\"quality\":79,\"coverage\":66,\"connection_id\":\"mock-connection-id-4\",\"customer_id\":\"mock-cuid-4\",\"attributes\":[{\"key\":\"birthdate\",\"value\":\"22/11/1940\",\"type\":\"string\",\"certificationLevel\":300,\"certifier\":\"mail\",\"certificationDate\":\"2023-05-03\"},{\"key\":\"family_name\",\"value\":\"Durant\",\"type\":\"string\",\"certificationLevel\":700,\"certifier\":\"r2p\",\"certificationDate\":\"2023-05-03\"},{\"key\":\"first_name\",\"value\":\"Gilles\",\"type\":\"string\",\"certificationLevel\":500,\"certifier\":\"agent\",\"certificationDate\":\"2023-05-03\"},{\"key\":\"mobile_phone\",\"value\":\"06.12.23.34.45\",\"type\":\"string\",\"certificationLevel\":600,\"certifier\":\"sms\",\"certificationDate\":\"2023-05-03\"}]}",
