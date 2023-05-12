@@ -1,0 +1,47 @@
+<script type="text/javascript">
+    $(function(){
+        $('.action-box').hide();
+        $('input[name="rule-id"]').click(function(){
+            $('.action-box').show();
+        })
+    });
+</script>
+
+<form class="form-inline" action="jsp/admin/plugins/identitymediation/IdentityDuplicate.jsp">
+    <@rowBox>
+        <@boxHeader i18nTitleKey="identitymediation.potential_duplicates.title">
+            <@headerButtons>
+            </@headerButtons>
+        </@boxHeader>
+        <@boxBody>
+            <@messages infos=infos />
+            <@messages errors=errors />
+            <@messages warnings=warnings />
+
+            <@table>
+                <tr>
+                    <th></th>
+                    <th>#i18n{identitymediation.choose_duplicate_type.ruleColumn}</th>
+                    <th>#i18n{identitymediation.choose_duplicate_type.descriptionColumn}</th>
+                    <th>#i18n{identitymediation.choose_duplicate_type.pendingColumn}</th>
+                </tr>
+                <@tableHeadBodySeparator />
+                <#list duplicate_rule_list as rule>
+                    <tr>
+                        <td><input type="radio" name="rule-id" value="${rule.id}"></td>
+                        <td>${rule.label}</td>
+                        <td>${rule.description}</td>
+                        <td>${rule.pendingDuplicates}</td>
+                    </tr>
+                </#list>
+            </@table>
+        </@boxBody>
+    </@rowBox>
+    <@rowBox boxClass="action-box">
+        <@boxBody>
+            <button id="search-btn" class="btn btn-warning" name="view_searchDuplicates" >
+                #i18n{identitymediation.choose_duplicate_type.buttonSearch}
+            </button>
+        </@boxBody>
+    </@rowBox>
+</form>

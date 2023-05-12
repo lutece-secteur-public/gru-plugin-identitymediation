@@ -54,13 +54,11 @@ import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
 
 import javax.servlet.http.HttpServletRequest;
-import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.Date;
 import java.util.List;
 import java.util.Map;
-import java.util.stream.Collectors;
 
 /**
  * This class provides the user interface to manage identity duplicates (search, resolve)
@@ -69,6 +67,7 @@ import java.util.stream.Collectors;
 public class IdentityDuplicateJspBean extends MVCAdminJspBean
 {
     // Messages
+    private static final String MESSAGE_FETCH_DUPLICATE_RULES_ERROR = "identitymediation.message.fetch_duplicate_rules.error";
     private static final String MESSAGE_FETCH_DUPLICATE_HOLDERS_ERROR = "identitymediation.message.fetch_duplicate_holders.error";
     private static final String MESSAGE_FETCH_DUPLICATE_HOLDERS_NORESULT = "identitymediation.message.fetch_duplicate_holders.noresult";
     private static final String MESSAGE_GET_SERVICE_CONTRACT_ERROR = "identitymediation.message.get_service_contract.error";
@@ -79,6 +78,7 @@ public class IdentityDuplicateJspBean extends MVCAdminJspBean
     private static final String MESSAGE_EXCLUDE_DUPLICATES_SUCCESS = "identitymediation.message.exclude_duplicates.success";
 
     // Views
+    private static final String VIEW_CHOOSE_DUPLICATE_TYPE = "chooseDuplicateType";
     private static final String VIEW_SEARCH_DUPLICATES = "searchDuplicates";
     private static final String VIEW_RESOLVE_DUPLICATES = "resolveDuplicates";
 
@@ -87,14 +87,17 @@ public class IdentityDuplicateJspBean extends MVCAdminJspBean
     private static final String ACTION_EXCLUDE_DUPLICATE = "excludeDuplicate";
 
     // Templates
+    private static final String TEMPLATE_CHOOSE_DUPLICATE_TYPE = "/admin/plugins/identitymediation/choose_duplicate_type.html";
     private static final String TEMPLATE_SEARCH_DUPLICATES = "/admin/plugins/identitymediation/search_duplicates.html";
     private static final String TEMPLATE_RESOLVE_DUPLICATES = "/admin/plugins/identitymediation/resolve_duplicates.html";
 
     // Properties for page titles
+    private static final String PROPERTY_PAGE_TITLE_CHOOSE_DUPLICATE_TYPE = "identitymediation.choose_duplicate_type.pageTitle";
     private static final String PROPERTY_PAGE_TITLE_SEARCH_DUPLICATES = "identitymediation.search_duplicates.pageTitle";
     private static final String PROPERTY_PAGE_TITLE_RESOLVE_DUPLICATES = "identitymediation.resolve_duplicates.pageTitle";
 
     // Markers
+    private static final String MARK_DUPLICATE_RULE_LIST = "duplicate_rule_list";
     private static final String MARK_DUPLICATE_HOLDER_LIST = "duplicate_holder_list";
     private static final String MARK_SERVICE_CONTRACT = "service_contract";
     private static final String MARK_IDENTITY = "identity";
@@ -108,22 +111,102 @@ public class IdentityDuplicateJspBean extends MVCAdminJspBean
     private String _currentClientCode = AppPropertiesService.getProperty( "identitymediation.default.client.code" );
 
     /**
+     *
+     * @param request
+     * @return
+     */
+    @View( value = VIEW_CHOOSE_DUPLICATE_TYPE, defaultView = true )
+    public String getDuplicateTypes( final HttpServletRequest request )
+    {
+
+        initClientCode( request );
+        initServiceContract( _currentClientCode );
+
+        final List<DuplicateRules> duplicateRules = new ArrayList<>( );
+        try
+        {
+            duplicateRules.addAll( fetchDuplicateRules( ) );
+        }
+        catch( IdentityStoreException e )
+        {
+            AppLogService.error( "Error while fetching duplicate calculation rules.", e );
+            addError( MESSAGE_FETCH_DUPLICATE_HOLDERS_ERROR, getLocale( ) );
+        }
+
+        final Map<String, Object> model = getModel( );
+        model.put( MARK_DUPLICATE_RULE_LIST, duplicateRules );
+        model.put( MARK_SERVICE_CONTRACT, _serviceContract );
+
+        return getPage( PROPERTY_PAGE_TITLE_CHOOSE_DUPLICATE_TYPE, TEMPLATE_CHOOSE_DUPLICATE_TYPE, model );
+    }
+
+    private List<DuplicateRules> fetchDuplicateRules( ) throws IdentityStoreException
+    {
+        // TODO mock for now
+        final List<DuplicateRules> duplicateRules = new ArrayList<>( );
+        duplicateRules.add( new DuplicateRules( "1", "Doublons stricts", "Description de la règle de détection des doublons stricts", 2 ) );
+        duplicateRules.add( new DuplicateRules( "2", "Doublon approximé", "Description de la règle de détection des doublons approximés", 0 ) );
+        return duplicateRules;
+    }
+
+    /**
+     * FIXME MOCK CLASS, TO DELETE WHEN NOT USED
+     */
+    public static class DuplicateRules
+    {
+        private final String id;
+        private final String label;
+        private final String description;
+        private final Integer pendingDuplicates;
+
+        public DuplicateRules( String id, String label, String description, Integer pendingDuplicates )
+        {
+            this.id = id;
+            this.label = label;
+            this.description = description;
+            this.pendingDuplicates = pendingDuplicates;
+        }
+
+        public String getId( )
+        {
+            return id;
+        }
+
+        public String getLabel( )
+        {
+            return label;
+        }
+
+        public String getDescription( )
+        {
+            return description;
+        }
+
+        public Integer getPendingDuplicates( )
+        {
+            return pendingDuplicates;
+        }
+    }
+
+    /**
      * Process the data to send the search request and returns the duplicates search form and results
      *
      * @param request
      *            The Http request
      * @return the html code of the duplicate form
      */
-    @View( value = VIEW_SEARCH_DUPLICATES, defaultView = true )
+    @View( value = VIEW_SEARCH_DUPLICATES )
     public String getSearchDuplicates( final HttpServletRequest request )
     {
-        initClientCode( request );
-        initServiceContract( _currentClientCode );
-
+        final String ruleId = request.getParameter( "rule-id" );
+        if ( StringUtils.isBlank( ruleId ) )
+        {
+            throw new RuntimeException( "error" ); // TODO
+        }
         final List<QualifiedIdentity> identities = new ArrayList<>( );
         try
         {
-            identities.addAll( fetchPotentialDuplicateHolders( ) );
+            identities.addAll( fetchPotentialDuplicateHolders( ruleId ) );
             if ( CollectionUtils.isEmpty( identities ) )
             {
                 addInfo( MESSAGE_FETCH_DUPLICATE_HOLDERS_NORESULT, getLocale( ) );
@@ -145,7 +228,7 @@ public class IdentityDuplicateJspBean extends MVCAdminJspBean
     /**
      * Fetches identities that are likely to have duplicates.
      */
-    private List<QualifiedIdentity> fetchPotentialDuplicateHolders( ) throws IdentityStoreException
+    private List<QualifiedIdentity> fetchPotentialDuplicateHolders( final String ruleId ) throws IdentityStoreException
     {
         // FIXME mock for the time being.
         try
@@ -243,8 +326,8 @@ public class IdentityDuplicateJspBean extends MVCAdminJspBean
         }
         // TODO send merge duplicate request
 
-        addInfo(MESSAGE_MERGE_DUPLICATES_SUCCESS, getLocale());
-        return getSearchDuplicates(request);
+        addInfo( MESSAGE_MERGE_DUPLICATES_SUCCESS, getLocale( ) );
+        return getSearchDuplicates( request );
     }
 
     /**
@@ -264,8 +347,8 @@ public class IdentityDuplicateJspBean extends MVCAdminJspBean
         }
         // TODO send exclude duplicate request
 
-        addInfo(MESSAGE_EXCLUDE_DUPLICATES_SUCCESS, getLocale());
-        return getSearchDuplicates(request);
+        addInfo( MESSAGE_EXCLUDE_DUPLICATES_SUCCESS, getLocale( ) );
+        return getSearchDuplicates( request );
     }
 
     /**
@@ -329,12 +412,15 @@ public class IdentityDuplicateJspBean extends MVCAdminJspBean
             final ArrayList<QualifiedIdentity> list = new ArrayList<>( );
             final ObjectMapper mapper = new ObjectMapper( );
 
-            list.add( mapper.readValue(
-                    "{\"scoring\":1,\"quality\":77,\"coverage\":66,\"connection_id\":\"mock-connection-id-3\",\"customer_id\":\"mock-cuid-3\",\"attributes\":[{\"key\":\"birthdate\",\"value\":\"22/11/1940\",\"type\":\"string\",\"certificationLevel\":300,\"certifier\":\"mail\",\"certificationDate\":\"2023-05-03\"},{\"key\":\"family_name\",\"value\":\"Durand\",\"type\":\"string\",\"certificationLevel\":700,\"certifier\":\"r2p\",\"certificationDate\":\"2023-05-03\"},{\"key\":\"first_name\",\"value\":\"Gille\",\"type\":\"string\",\"certificationLevel\":600,\"certifier\":\"agent\",\"certificationDate\":\"2023-05-03\"},{\"key\":\"mobile_phone\",\"value\":\"06.66.32.89.01\",\"type\":\"string\",\"certificationLevel\":600,\"certifier\":\"sms\",\"certificationDate\":\"2023-05-03\"}]}",
-                    QualifiedIdentity.class ) );
+            // list.add( mapper.readValue(
+            // "{\"scoring\":1,\"quality\":77,\"coverage\":66,\"connection_id\":\"mock-connection-id-3\",\"customer_id\":\"mock-cuid-3\",\"attributes\":[{\"key\":\"birthdate\",\"value\":\"22/11/1940\",\"type\":\"string\",\"certificationLevel\":300,\"certifier\":\"mail\",\"certificationDate\":\"2023-05-03\"},{\"key\":\"family_name\",\"value\":\"Durand\",\"type\":\"string\",\"certificationLevel\":700,\"certifier\":\"r2p\",\"certificationDate\":\"2023-05-03\"},{\"key\":\"first_name\",\"value\":\"Gille\",\"type\":\"string\",\"certificationLevel\":600,\"certifier\":\"agent\",\"certificationDate\":\"2023-05-03\"},{\"key\":\"mobile_phone\",\"value\":\"06.66.32.89.01\",\"type\":\"string\",\"certificationLevel\":600,\"certifier\":\"sms\",\"certificationDate\":\"2023-05-03\"}]}",
+            // QualifiedIdentity.class ) );
             list.add( mapper.readValue(
                     "{\"scoring\":1,\"quality\":79,\"coverage\":66,\"connection_id\":\"mock-connection-id-4\",\"customer_id\":\"mock-cuid-4\",\"attributes\":[{\"key\":\"birthdate\",\"value\":\"22/11/1940\",\"type\":\"string\",\"certificationLevel\":300,\"certifier\":\"mail\",\"certificationDate\":\"2023-05-03\"},{\"key\":\"family_name\",\"value\":\"Durant\",\"type\":\"string\",\"certificationLevel\":700,\"certifier\":\"r2p\",\"certificationDate\":\"2023-05-03\"},{\"key\":\"first_name\",\"value\":\"Gilles\",\"type\":\"string\",\"certificationLevel\":500,\"certifier\":\"agent\",\"certificationDate\":\"2023-05-03\"},{\"key\":\"mobile_phone\",\"value\":\"06.12.23.34.45\",\"type\":\"string\",\"certificationLevel\":600,\"certifier\":\"sms\",\"certificationDate\":\"2023-05-03\"}]}",
                     QualifiedIdentity.class ) );
+            // list.add( mapper.readValue(
+            // "{\"scoring\":1,\"quality\":81,\"coverage\":66,\"connection_id\":\"mock-connection-id-5\",\"customer_id\":\"mock-cuid-5\",\"attributes\":[{\"key\":\"birthdate\",\"value\":\"22/11/1940\",\"type\":\"string\",\"certificationLevel\":300,\"certifier\":\"mail\",\"certificationDate\":\"2023-05-03\"},{\"key\":\"family_name\",\"value\":\"Durant\",\"type\":\"string\",\"certificationLevel\":700,\"certifier\":\"r2p\",\"certificationDate\":\"2023-05-03\"},{\"key\":\"first_name\",\"value\":\"Gilles\",\"type\":\"string\",\"certificationLevel\":500,\"certifier\":\"agent\",\"certificationDate\":\"2023-05-03\"},{\"key\":\"mobile_phone\",\"value\":\"06.31.55.63.28\",\"type\":\"string\",\"certificationLevel\":600,\"certifier\":\"sms\",\"certificationDate\":\"2023-05-03\"}]}",
+            // QualifiedIdentity.class ) );
 
             return list;
         }
