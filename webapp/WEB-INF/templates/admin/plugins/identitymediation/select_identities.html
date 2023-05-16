@@ -1,0 +1,98 @@
+<style>
+    #select-identities-table th {
+        text-transform: uppercase;
+    }
+</style>
+<script type="text/javascript">
+    $(function () {
+        $('.action-box').hide();
+        $('.selected-identity-btn').hide();
+
+        $('button.select-identity-btn').click(function () {
+            $(this).hide();
+            $(this).parent().children('.selected-identity-btn').show();
+            $("input[value='" + $(this).data('cuid') + "']").prop('disabled', false);
+            if ($('.selected-identity-btn:visible').length === 2) {
+                $('div.action-box').show();
+                $('button.select-identity-btn').prop('disabled', true);
+            }
+        });
+        $('button.selected-identity-btn').click(function () {
+            $(this).hide();
+            $(this).parent().children('.select-identity-btn').show();
+            $("input[value='" + $(this).data('cuid') + "']").prop('disabled', true);
+            $('div.action-box').hide();
+            $('button.select-identity-btn').prop('disabled', false);
+        });
+    });
+</script>
+
+<form class="form-inline" action="jsp/admin/plugins/identitymediation/IdentityDuplicate.jsp">
+    <@rowBox>
+        <@boxHeader i18nTitleKey="identitymediation.resolve_duplicates.title">
+            <@headerButtons>
+            </@headerButtons>
+        </@boxHeader>
+        <@boxBody>
+            <@messages infos=infos />
+            <@messages errors=errors />
+            <@messages warnings=warnings />
+
+            <#if service_contract??>
+                <@table id="select-identities-table">
+                    <tr>
+                        <th>&nbsp;</th>
+                        <#assign count = 1>
+                        <#list identity_list as identity>
+                            <th class="fw-normal">
+                                <div class="col-12">#i18n{identitymediation.select_identities.identity} ${count}</div>
+                                <span class="quality-span">${identity.quality}</span> %
+                                <input type="hidden" name="identity-cuid-${count}" value="${identity.customerId}" disabled >
+                            </th>
+                            <#assign count = count + 1>
+                        </#list>
+                    </tr>
+                    <@tableHeadBodySeparator />
+                    <#list service_contract.attributeDefinitions?filter(a -> a.attributeRight.readable) as readableAttr>
+                        <tr>
+                            <td>${readableAttr.name}</td>
+                            <#list identity_list as identity>
+                                <td>
+                                    <#list identity.attributes?filter(a -> a.key == readableAttr.keyName) as attr>
+                                        <span class="${attr.key}-value">${attr.value}</span>
+                                        <#if attr.certifier??>
+                                            <span class="badge rounded-pill bg-info mx-1">${attr.certifier}</span>
+                                        </#if>
+                                        <#if attr.certificationDate??>
+                                            <span class="certification-date">${attr.certificationDate?date}</span>
+                                        </#if>
+                                    </#list>
+                                </td>
+                            </#list>
+                        </tr>
+                    </#list>
+                    <tr>
+                        <td>&nbsp;</td>
+                        <#list identity_list as identity>
+                            <td>
+                                <button type="button" class="btn btn-outline-warning select-identity-btn" data-cuid="${identity.customerId}">
+                                    #i18n{identitymediation.select_identities.buttonSelectIdentity}
+                                </button>
+                                <button type="button" class="btn btn-warning selected-identity-btn" data-cuid="${identity.customerId}" >
+                                    #i18n{identitymediation.select_identities.buttonSelectedIdentity}
+                                </button>
+                            </td>
+                        </#list>
+                    </tr>
+                </@table>
+            </#if>
+        </@boxBody>
+    </@rowBox>
+    <@rowBox boxClass="action-box">
+        <@boxBody>
+            <button id="countinue-btn" class="btn btn-warning" name="view_resolveDuplicates" >
+                #i18n{identitymediation.select_identities.buttonContinue}
+            </button>
+        </@boxBody>
+    </@rowBox>
+</form>

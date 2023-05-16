@@ -14,12 +14,6 @@
 </style>
 <script type="text/javascript">
     $(function() {
-        if ($('input[name="duplicate-id"]').val()) {
-            $('div.action-box').show();
-        } else {
-            $('div.action-box').hide();
-        }
-
         $('span[id^="main-"]').each(function() {
             let value = $(this).text().trim().toUpperCase();
             if (value) {
@@ -30,11 +24,6 @@
                     }
                 });
             }
-        });
-
-        $('button.select-identity-btn').click(function() {
-            $('input[name="duplicate-id"]').val($(this).data('cuid'));
-            $('div.action-box').show();
         });
 
         $('button.arrow-button').click(function() {
@@ -69,8 +58,6 @@
 </script>
 
 <form class="form-inline" action="jsp/admin/plugins/identitymediation/IdentityDuplicate.jsp">
-    <input type="hidden" name="customer-id" value="${identity.customerId}">
-    <input type="hidden" name="connection-id" value="${identity.connectionId}">
     <@rowBox>
         <@boxHeader i18nTitleKey="identitymediation.resolve_duplicates.title">
             <@headerButtons>
@@ -84,17 +71,16 @@
             <#if service_contract??>
                 <@table id="resolve-duplicate-table">
                     <tr>
-                        <th>&nbsp;</th>
-                        <th>
+                        <th style="width: 400px;">&nbsp;</th>
+                        <th style="width: 500px;">
                             <div class="col-12">#i18n{identitymediation.resolve_duplicates.identityToKeep}</div>
-                            <span class="quality-span">${identity.quality}</span> %
+                            <span class="quality-span">${identity_to_keep.quality}</span> %
                         </th>
-                        <#list potential_duplicate_list as duplicate>
-                            <th class="fw-normal">
-                                <div class="col-12">#i18n{identitymediation.resolve_duplicates.identityToMerge}</div>
-                                <span class="quality-span">${duplicate.quality}</span> %
-                            </th>
-                        </#list>
+                        <th style="width: 300px;"><@button buttonIcon='arrows-left-right' type='submit' name="action_swapIdentities"/></th>
+                        <th class="fw-normal">
+                            <div class="col-12">#i18n{identitymediation.resolve_duplicates.identityToMerge}</div>
+                            <span class="quality-span">${identity_to_merge.quality}</span> %
+                        </th>
                     </tr>
                     <@tableHeadBodySeparator />
                     <#list service_contract.attributeDefinitions?filter(a -> a.attributeRight.readable) as readableAttr>
@@ -104,7 +90,7 @@
                             <input type="hidden" name="override-${readableAttr.keyName}-certif" disabled>
                             <input type="hidden" name="override-${readableAttr.keyName}-certiftimestamp" disabled>
                             <td id="${readableAttr.keyName}-main-td">
-                                <#list identity.attributes?filter(a -> a.key == readableAttr.keyName) as attr>
+                                <#list identity_to_keep.attributes?filter(a -> a.key == readableAttr.keyName) as attr>
                                     <span id="main-${attr.key}" class="fw-bold">${attr.value}</span>
                                     <#if attr.certifier??>
                                         <span class="badge rounded-pill bg-info mx-1">${attr.certifier}</span>
@@ -114,40 +100,23 @@
                                     </#if>
                                 </#list>
                             </td>
-                            <#list potential_duplicate_list as duplicate>
-                                <td>
-                                    <#list duplicate.attributes?filter(a -> a.key == readableAttr.keyName) as attr>
-                                        <#if identity.attributes?filter(a -> a.key == readableAttr.keyName)?size == 0 && readableAttr.attributeRight.writable >
-                                            <@button class='arrow-button' buttonIcon='arrow-left' params='data-key="${attr.key}" data-value="${attr.value}" data-certif="${attr.certifier}" data-certifdate="${attr.certificationDate?date}" data-certiftimestamp="${attr.certificationDate?long}"' />
-                                        </#if>
-                                        <span class="${attr.key}-value">${attr.value}</span>
-                                        <#if attr.certifier??>
-                                            <span class="badge rounded-pill bg-info mx-1">${attr.certifier}</span>
-                                        </#if>
-                                        <#if attr.certificationDate??>
-                                            <span class="certification-date">${attr.certificationDate?date}</span>
-                                        </#if>
-                                    </#list>
-                                </td>
-                            </#list>
+                            <td></td>
+                            <td>
+                                <#list identity_to_merge.attributes?filter(a -> a.key == readableAttr.keyName) as attr>
+                                    <#if identity_to_keep.attributes?filter(a -> a.key == readableAttr.keyName)?size == 0 && readableAttr.attributeRight.writable >
+                                        <@button class='arrow-button' buttonIcon='arrow-left' params='data-key="${attr.key}" data-value="${attr.value}" data-certif="${attr.certifier}" data-certifdate="${attr.certificationDate?date}" data-certiftimestamp="${attr.certificationDate?long}"' />
+                                    </#if>
+                                    <span class="${attr.key}-value">${attr.value}</span>
+                                    <#if attr.certifier??>
+                                        <span class="badge rounded-pill bg-info mx-1">${attr.certifier}</span>
+                                    </#if>
+                                    <#if attr.certificationDate??>
+                                        <span class="certification-date">${attr.certificationDate?date}</span>
+                                    </#if>
+                                </#list>
+                            </td>
                         </tr>
                     </#list>
-                    <#if potential_duplicate_list?size gt 1>
-                        <tr>
-                            <td>&nbsp;</td>
-                            <td>&nbsp;</td>
-                            <#list potential_duplicate_list as duplicate>
-                                <td>
-                                    <button type="button" class="btn btn-outline-warning action-btn select-identity-btn" data-cuid="${duplicate.customerId}">
-                                        #i18n{identitymediation.resolve_duplicates.buttonSelectIdentity}
-                                    </button>
-                                </td>
-                            </#list>
-                        </tr>
-                        <input type="hidden" name="duplicate-id">
-                    <#else>
-                        <input type="hidden" name="duplicate-id" value="<#list potential_duplicate_list as duplicate>${duplicate.customerId}</#list>">
-                    </#if>
                 </@table>
             </#if>
         </@boxBody>

@@ -59,6 +59,7 @@ import java.util.Comparator;
 import java.util.Date;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 /**
  * This class provides the user interface to manage identity duplicates (search, resolve)
@@ -80,28 +81,33 @@ public class IdentityDuplicateJspBean extends MVCAdminJspBean
     // Views
     private static final String VIEW_CHOOSE_DUPLICATE_TYPE = "chooseDuplicateType";
     private static final String VIEW_SEARCH_DUPLICATES = "searchDuplicates";
+    private static final String VIEW_SELECT_IDENTITIES = "selectIdentities";
     private static final String VIEW_RESOLVE_DUPLICATES = "resolveDuplicates";
 
     // Actions
+    private static final String ACTION_SWAP_IDENTITIES = "swapIdentities";
     private static final String ACTION_MERGE_DUPLICATE = "mergeDuplicate";
     private static final String ACTION_EXCLUDE_DUPLICATE = "excludeDuplicate";
 
     // Templates
     private static final String TEMPLATE_CHOOSE_DUPLICATE_TYPE = "/admin/plugins/identitymediation/choose_duplicate_type.html";
     private static final String TEMPLATE_SEARCH_DUPLICATES = "/admin/plugins/identitymediation/search_duplicates.html";
+    private static final String TEMPLATE_SELECT_IDENTITIES = "/admin/plugins/identitymediation/select_identities.html";
     private static final String TEMPLATE_RESOLVE_DUPLICATES = "/admin/plugins/identitymediation/resolve_duplicates.html";
 
     // Properties for page titles
     private static final String PROPERTY_PAGE_TITLE_CHOOSE_DUPLICATE_TYPE = "identitymediation.choose_duplicate_type.pageTitle";
     private static final String PROPERTY_PAGE_TITLE_SEARCH_DUPLICATES = "identitymediation.search_duplicates.pageTitle";
+    private static final String PROPERTY_PAGE_TITLE_SELECT_IDENTITIES = "identitymediation.select_identities.pageTitle";
     private static final String PROPERTY_PAGE_TITLE_RESOLVE_DUPLICATES = "identitymediation.resolve_duplicates.pageTitle";
 
     // Markers
     private static final String MARK_DUPLICATE_RULE_LIST = "duplicate_rule_list";
     private static final String MARK_DUPLICATE_HOLDER_LIST = "duplicate_holder_list";
     private static final String MARK_SERVICE_CONTRACT = "service_contract";
-    private static final String MARK_IDENTITY = "identity";
-    private static final String MARK_POTENTIAL_DUPLICATE_LIST = "potential_duplicate_list";
+    private static final String MARK_IDENTITY_LIST = "identity_list";
+    private static final String MARK_IDENTITY_TO_KEEP = "identity_to_keep";
+    private static final String MARK_IDENTITY_TO_MERGE = "identity_to_merge";
 
     // Cache
     private static final ServiceContractCache _serviceContractCache = SpringContextService.getBean( "identitymediation.serviceContractCache" );
@@ -109,6 +115,8 @@ public class IdentityDuplicateJspBean extends MVCAdminJspBean
     // Session variable to store working values
     private ServiceContractDto _serviceContract;
     private String _currentClientCode = AppPropertiesService.getProperty( "identitymediation.default.client.code" );
+    private QualifiedIdentity _identityToKeep;
+    private QualifiedIdentity _identityToMerge;
 
     /**
      *
@@ -252,14 +260,13 @@ public class IdentityDuplicateJspBean extends MVCAdminJspBean
     }
 
     /**
-     * Returns the form to manually resolve an identity duplicates
-     *
+     * Returns the form to select which identities to process
+     * 
      * @param request
-     *            The Http request
-     * @return the html code of the form
+     * @return
      */
-    @View( value = VIEW_RESOLVE_DUPLICATES )
-    public String getResolveDuplicates( final HttpServletRequest request )
+    @View( value = VIEW_SELECT_IDENTITIES )
+    public String getSelectIdentities( final HttpServletRequest request )
     {
         final QualifiedIdentity identity;
         try
@@ -277,16 +284,18 @@ public class IdentityDuplicateJspBean extends MVCAdminJspBean
             return getSearchDuplicates( request );
         }
 
-        final List<QualifiedIdentity> duplicates = new ArrayList<>( );
+        final List<QualifiedIdentity> identityList = new ArrayList<>( );
+        identityList.add( identity );
         try
         {
-            duplicates.addAll( fetchPotentialDuplicates( identity ) );
-            if ( CollectionUtils.isEmpty( duplicates ) )
+            final List<QualifiedIdentity> duplicateList = fetchPotentialDuplicates( identity );
+            if ( CollectionUtils.isEmpty( duplicateList ) )
             {
                 addError( MESSAGE_FETCH_DUPLICATES_NORESULT, getLocale( ) );
                 return getSearchDuplicates( request );
             }
-            sortDuplicatesByQuality( duplicates );
+            identityList.addAll( duplicateList );
+            sortByQuality( identityList );
         }
         catch( IdentityStoreException e )
         {
@@ -294,11 +303,71 @@ public class IdentityDuplicateJspBean extends MVCAdminJspBean
             return getSearchDuplicates( request );
         }
 
-        sendAcknoledgement( identity );
+        final Map<String, Object> model = getModel( );
+        model.put( MARK_IDENTITY_LIST, identityList );
+        model.put( MARK_SERVICE_CONTRACT, _serviceContract );
+
+        return getPage( PROPERTY_PAGE_TITLE_SELECT_IDENTITIES, TEMPLATE_SELECT_IDENTITIES, model );
+    }
+
+    /**
+     * Returns the form to manually resolve an identity duplicates
+     *
+     * @param request
+     *            The Http request
+     * @return the html code of the form
+     */
+    @View( value = VIEW_RESOLVE_DUPLICATES )
+    public String getResolveDuplicates( final HttpServletRequest request )
+    {
+        final List<String> cuidList = request.getParameterMap( ).entrySet( ).stream( ).filter( e -> e.getKey( ).startsWith( "identity-cuid-" ) )
+                .map( e -> e.getValue( ) [0] ).collect( Collectors.toList( ) );
+        if ( CollectionUtils.isEmpty( cuidList ) || cuidList.size( ) != 2 )
+        {
+            throw new RuntimeException( "error" ); // TODO
+        }
+        try
+        {
+            initIdentityToKeep( cuidList.get( 0 ) );
+            initIdentityToMerge( cuidList.get( 1 ) );
+            if ( _identityToKeep == null || _identityToMerge == null )
+            {
+                addError( MESSAGE_GET_IDENTITY_ERROR, getLocale( ) );
+                return getSearchDuplicates( request );
+            }
+        }
+        catch( final IdentityStoreException e )
+        {
+            addError( MESSAGE_GET_IDENTITY_ERROR, getLocale( ) );
+            return getSearchDuplicates( request );
+        }
+
+        sendAcknoledgement( _identityToKeep, _identityToMerge );
 
         final Map<String, Object> model = getModel( );
-        model.put( MARK_IDENTITY, identity );
-        model.put( MARK_POTENTIAL_DUPLICATE_LIST, duplicates );
+        model.put( MARK_IDENTITY_TO_KEEP, _identityToKeep );
+        model.put( MARK_IDENTITY_TO_MERGE, _identityToMerge );
+        model.put( MARK_SERVICE_CONTRACT, _serviceContract );
+
+        return getPage( PROPERTY_PAGE_TITLE_RESOLVE_DUPLICATES, TEMPLATE_RESOLVE_DUPLICATES, model );
+    }
+
+    /**
+     * Swaps the selected identities to work with.
+     * 
+     * @param request
+     * @return
+     */
+    @Action( ACTION_SWAP_IDENTITIES )
+    public String doSwapIdentities( final HttpServletRequest request )
+    {
+        final QualifiedIdentity previouslyToKeep = _identityToKeep;
+        _identityToKeep = _identityToMerge;
+        _identityToMerge = previouslyToKeep;
+
+        final Map<String, Object> model = getModel( );
+        model.put( MARK_IDENTITY_TO_KEEP, _identityToKeep );
+        model.put( MARK_IDENTITY_TO_MERGE, _identityToMerge );
         model.put( MARK_SERVICE_CONTRACT, _serviceContract );
 
         return getPage( PROPERTY_PAGE_TITLE_RESOLVE_DUPLICATES, TEMPLATE_RESOLVE_DUPLICATES, model );
@@ -352,11 +421,12 @@ public class IdentityDuplicateJspBean extends MVCAdminJspBean
     }
 
     /**
-     * Send an acknolegement to the backend to mark the identity as being currently resolved.
+     * Send an acknolegement to the backend to mark both identities as being currently resolved.
      * 
-     * @param identity
+     * @param identity1
+     * @param identity2
      */
-    private void sendAcknoledgement( final QualifiedIdentity identity )
+    private void sendAcknoledgement( final QualifiedIdentity identity1, final QualifiedIdentity identity2 )
     {
         // FIXME mock for now
     }
@@ -364,11 +434,29 @@ public class IdentityDuplicateJspBean extends MVCAdminJspBean
     /**
      * Sort the duplicate list by quality (highest quality first)
      *
-     * @param duplicates
+     * @param identityList
      */
-    private void sortDuplicatesByQuality( List<QualifiedIdentity> duplicates )
+    private void sortByQuality( final List<QualifiedIdentity> identityList )
     {
-        duplicates.sort( Comparator.comparing( QualifiedIdentity::getQuality ).reversed( ) );
+        identityList.sort( Comparator.comparing( QualifiedIdentity::getQuality ).reversed( ) );
+    }
+
+    /**
+     * FIXME MOCK, TO DELETE
+     */
+    private void initIdentityToKeep( final String customerId ) throws IdentityStoreException
+    {
+        _identityToKeep = getQualifiedIdentityFromCustomerId( customerId );
+        _identityToKeep.setAttributes(
+                _identityToKeep.getAttributes( ).stream( ).filter( a -> !a.getKey( ).equals( "mobile_phone" ) ).collect( Collectors.toList( ) ) );
+    }
+
+    /**
+     * FIXME MOCK, TO DELETE
+     */
+    private void initIdentityToMerge( final String customerId ) throws IdentityStoreException
+    {
+        _identityToMerge = getQualifiedIdentityFromCustomerId( customerId );
     }
 
     /**
@@ -389,7 +477,7 @@ public class IdentityDuplicateJspBean extends MVCAdminJspBean
         {
             return new ObjectMapper( ).readValue( "{\"scoring\":1,\"quality\":82,\"coverage\":66,\"connection_id\":\"mock-connection-id-2\",\"customer_id\":\""
                     + customerId
-                    + "\",\"attributes\":[{\"key\":\"birthdate\",\"value\":\"22/11/1940\",\"type\":\"string\",\"certificationLevel\":300,\"certifier\":\"mail\",\"certificationDate\":\"2023-05-03\"},{\"key\":\"family_name\",\"value\":\"Durand\",\"type\":\"string\",\"certificationLevel\":700,\"certifier\":\"r2p\",\"certificationDate\":\"2023-05-03\"},{\"key\":\"first_name\",\"value\":\"Gilles\",\"type\":\"string\",\"certificationLevel\":600,\"certifier\":\"agent\",\"certificationDate\":\"2023-05-03\"}]}",
+                    + "\",\"attributes\":[{\"key\":\"birthdate\",\"value\":\"22/11/1940\",\"type\":\"string\",\"certificationLevel\":300,\"certifier\":\"mail\",\"certificationDate\":\"2023-05-03\"},{\"key\":\"family_name\",\"value\":\"Durand\",\"type\":\"string\",\"certificationLevel\":700,\"certifier\":\"r2p\",\"certificationDate\":\"2023-05-03\"},{\"key\":\"first_name\",\"value\":\"Gilles\",\"type\":\"string\",\"certificationLevel\":600,\"certifier\":\"agent\",\"certificationDate\":\"2023-05-03\"},{\"key\":\"mobile_phone\",\"value\":\"06.66.32.89.01\",\"type\":\"string\",\"certificationLevel\":600,\"certifier\":\"sms\",\"certificationDate\":\"2023-05-03\"}]}",
                     QualifiedIdentity.class );
         }
         catch( final Exception e )
@@ -412,15 +500,15 @@ public class IdentityDuplicateJspBean extends MVCAdminJspBean
             final ArrayList<QualifiedIdentity> list = new ArrayList<>( );
             final ObjectMapper mapper = new ObjectMapper( );
 
-            // list.add( mapper.readValue(
-            // "{\"scoring\":1,\"quality\":77,\"coverage\":66,\"connection_id\":\"mock-connection-id-3\",\"customer_id\":\"mock-cuid-3\",\"attributes\":[{\"key\":\"birthdate\",\"value\":\"22/11/1940\",\"type\":\"string\",\"certificationLevel\":300,\"certifier\":\"mail\",\"certificationDate\":\"2023-05-03\"},{\"key\":\"family_name\",\"value\":\"Durand\",\"type\":\"string\",\"certificationLevel\":700,\"certifier\":\"r2p\",\"certificationDate\":\"2023-05-03\"},{\"key\":\"first_name\",\"value\":\"Gille\",\"type\":\"string\",\"certificationLevel\":600,\"certifier\":\"agent\",\"certificationDate\":\"2023-05-03\"},{\"key\":\"mobile_phone\",\"value\":\"06.66.32.89.01\",\"type\":\"string\",\"certificationLevel\":600,\"certifier\":\"sms\",\"certificationDate\":\"2023-05-03\"}]}",
-            // QualifiedIdentity.class ) );
+            list.add( mapper.readValue(
+                    "{\"scoring\":1,\"quality\":77,\"coverage\":66,\"connection_id\":\"mock-connection-id-3\",\"customer_id\":\"mock-cuid-3\",\"attributes\":[{\"key\":\"birthdate\",\"value\":\"22/11/1940\",\"type\":\"string\",\"certificationLevel\":300,\"certifier\":\"mail\",\"certificationDate\":\"2023-05-03\"},{\"key\":\"family_name\",\"value\":\"Durand\",\"type\":\"string\",\"certificationLevel\":700,\"certifier\":\"r2p\",\"certificationDate\":\"2023-05-03\"},{\"key\":\"first_name\",\"value\":\"Gille\",\"type\":\"string\",\"certificationLevel\":600,\"certifier\":\"agent\",\"certificationDate\":\"2023-05-03\"},{\"key\":\"mobile_phone\",\"value\":\"06.66.32.89.01\",\"type\":\"string\",\"certificationLevel\":600,\"certifier\":\"sms\",\"certificationDate\":\"2023-05-03\"}]}",
+                    QualifiedIdentity.class ) );
             list.add( mapper.readValue(
                     "{\"scoring\":1,\"quality\":79,\"coverage\":66,\"connection_id\":\"mock-connection-id-4\",\"customer_id\":\"mock-cuid-4\",\"attributes\":[{\"key\":\"birthdate\",\"value\":\"22/11/1940\",\"type\":\"string\",\"certificationLevel\":300,\"certifier\":\"mail\",\"certificationDate\":\"2023-05-03\"},{\"key\":\"family_name\",\"value\":\"Durant\",\"type\":\"string\",\"certificationLevel\":700,\"certifier\":\"r2p\",\"certificationDate\":\"2023-05-03\"},{\"key\":\"first_name\",\"value\":\"Gilles\",\"type\":\"string\",\"certificationLevel\":500,\"certifier\":\"agent\",\"certificationDate\":\"2023-05-03\"},{\"key\":\"mobile_phone\",\"value\":\"06.12.23.34.45\",\"type\":\"string\",\"certificationLevel\":600,\"certifier\":\"sms\",\"certificationDate\":\"2023-05-03\"}]}",
                     QualifiedIdentity.class ) );
-            // list.add( mapper.readValue(
-            // "{\"scoring\":1,\"quality\":81,\"coverage\":66,\"connection_id\":\"mock-connection-id-5\",\"customer_id\":\"mock-cuid-5\",\"attributes\":[{\"key\":\"birthdate\",\"value\":\"22/11/1940\",\"type\":\"string\",\"certificationLevel\":300,\"certifier\":\"mail\",\"certificationDate\":\"2023-05-03\"},{\"key\":\"family_name\",\"value\":\"Durant\",\"type\":\"string\",\"certificationLevel\":700,\"certifier\":\"r2p\",\"certificationDate\":\"2023-05-03\"},{\"key\":\"first_name\",\"value\":\"Gilles\",\"type\":\"string\",\"certificationLevel\":500,\"certifier\":\"agent\",\"certificationDate\":\"2023-05-03\"},{\"key\":\"mobile_phone\",\"value\":\"06.31.55.63.28\",\"type\":\"string\",\"certificationLevel\":600,\"certifier\":\"sms\",\"certificationDate\":\"2023-05-03\"}]}",
-            // QualifiedIdentity.class ) );
+            list.add( mapper.readValue(
+                    "{\"scoring\":1,\"quality\":81,\"coverage\":66,\"connection_id\":\"mock-connection-id-5\",\"customer_id\":\"mock-cuid-5\",\"attributes\":[{\"key\":\"birthdate\",\"value\":\"22/11/1940\",\"type\":\"string\",\"certificationLevel\":300,\"certifier\":\"mail\",\"certificationDate\":\"2023-05-03\"},{\"key\":\"family_name\",\"value\":\"Durant\",\"type\":\"string\",\"certificationLevel\":700,\"certifier\":\"r2p\",\"certificationDate\":\"2023-05-03\"},{\"key\":\"first_name\",\"value\":\"Gilles\",\"type\":\"string\",\"certificationLevel\":500,\"certifier\":\"agent\",\"certificationDate\":\"2023-05-03\"},{\"key\":\"mobile_phone\",\"value\":\"06.31.55.63.28\",\"type\":\"string\",\"certificationLevel\":600,\"certifier\":\"sms\",\"certificationDate\":\"2023-05-03\"}]}",
+                    QualifiedIdentity.class ) );
 
             return list;
         }
