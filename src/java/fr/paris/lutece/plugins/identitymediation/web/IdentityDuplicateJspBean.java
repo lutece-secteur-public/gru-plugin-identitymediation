@@ -275,13 +275,13 @@ public class IdentityDuplicateJspBean extends MVCAdminJspBean
             if ( identity == null )
             {
                 addError( MESSAGE_GET_IDENTITY_ERROR, getLocale( ) );
-                return getSearchDuplicates( request );
+                return getDuplicateTypes( request );
             }
         }
         catch( final IdentityStoreException e )
         {
             addError( MESSAGE_GET_IDENTITY_ERROR, getLocale( ) );
-            return getSearchDuplicates( request );
+            return getDuplicateTypes( request );
         }
 
         final List<QualifiedIdentity> identityList = new ArrayList<>( );
@@ -292,7 +292,7 @@ public class IdentityDuplicateJspBean extends MVCAdminJspBean
             if ( CollectionUtils.isEmpty( duplicateList ) )
             {
                 addError( MESSAGE_FETCH_DUPLICATES_NORESULT, getLocale( ) );
-                return getSearchDuplicates( request );
+                return getDuplicateTypes( request );
             }
             identityList.addAll( duplicateList );
             sortByQuality( identityList );
@@ -300,7 +300,7 @@ public class IdentityDuplicateJspBean extends MVCAdminJspBean
         catch( IdentityStoreException e )
         {
             addError( MESSAGE_FETCH_DUPLICATES_ERROR, getLocale( ) );
-            return getSearchDuplicates( request );
+            return getDuplicateTypes( request );
         }
 
         final Map<String, Object> model = getModel( );
@@ -333,13 +333,13 @@ public class IdentityDuplicateJspBean extends MVCAdminJspBean
             if ( _identityToKeep == null || _identityToMerge == null )
             {
                 addError( MESSAGE_GET_IDENTITY_ERROR, getLocale( ) );
-                return getSearchDuplicates( request );
+                return getDuplicateTypes( request );
             }
         }
         catch( final IdentityStoreException e )
         {
             addError( MESSAGE_GET_IDENTITY_ERROR, getLocale( ) );
-            return getSearchDuplicates( request );
+            return getDuplicateTypes( request );
         }
 
         sendAcknoledgement( _identityToKeep, _identityToMerge );
@@ -382,9 +382,7 @@ public class IdentityDuplicateJspBean extends MVCAdminJspBean
     @Action( ACTION_MERGE_DUPLICATE )
     public String doMergeDuplicate( HttpServletRequest request )
     {
-        final String identityId = request.getParameter( "customer-id" );
-        final String duplicateId = request.getParameter( "duplicate-id" );
-        if ( StringUtils.isAnyBlank( identityId, duplicateId ) )
+        if ( _identityToKeep == null || _identityToMerge == null || _identityToMerge.equals( _identityToKeep ) )
         {
             throw new RuntimeException( "error" ); // TODO
         }
@@ -396,7 +394,7 @@ public class IdentityDuplicateJspBean extends MVCAdminJspBean
         // TODO send merge duplicate request
 
         addInfo( MESSAGE_MERGE_DUPLICATES_SUCCESS, getLocale( ) );
-        return getSearchDuplicates( request );
+        return getDuplicateTypes( request );
     }
 
     /**
@@ -408,16 +406,14 @@ public class IdentityDuplicateJspBean extends MVCAdminJspBean
     @Action( ACTION_EXCLUDE_DUPLICATE )
     public String doExcludeDuplicate( HttpServletRequest request )
     {
-        final String identityId = request.getParameter( "customer-id" );
-        final String duplicateId = request.getParameter( "duplicate-id" );
-        if ( StringUtils.isAnyBlank( identityId, duplicateId ) )
+        if ( _identityToKeep == null || _identityToMerge == null || _identityToMerge.equals( _identityToKeep ) )
         {
             throw new RuntimeException( "error" ); // TODO
         }
         // TODO send exclude duplicate request
 
         addInfo( MESSAGE_EXCLUDE_DUPLICATES_SUCCESS, getLocale( ) );
-        return getSearchDuplicates( request );
+        return getDuplicateTypes( request );
     }
 
     /**
@@ -570,18 +566,18 @@ public class IdentityDuplicateJspBean extends MVCAdminJspBean
         }
         final IdentityChangeRequest changeRequest = new IdentityChangeRequest( );
         final Identity identity = new Identity( );
-        identity.setCustomerId( request.getParameter( "customer-id" ) );
-        identity.setConnectionId( request.getParameter( "connection-id" ) );
+        identity.setCustomerId( _identityToKeep.getCustomerId( ) );
+        identity.setConnectionId( _identityToKeep.getConnectionId( ) );
 
-        request.getParameterMap( ).entrySet( ).stream( ).filter( entry -> entry.getKey( ).startsWith( "override-" ) && !entry.getKey( ).endsWith( "-certif" )
-                && !entry.getKey( ).endsWith( "-certiftimestamp" ) ).forEach( entry -> {
-                    final String key = entry.getKey( );
+        request.getParameterMap( ).entrySet( ).stream( ).filter( entry -> entry.getKey( ).startsWith( "override-" ) && !entry.getKey( ).endsWith( "-certif" ) )
+                .forEach( entry -> {
+                    final String overrideKey = entry.getKey( );
                     final String value = entry.getValue( ) [0];
-                    final String certif = request.getParameter( key + "-certif" );
-                    final String timestamp = request.getParameter( key + "-certiftimestamp" );
+                    final String certif = request.getParameter( overrideKey + "-certif" );
+                    final String timestamp = request.getParameter( overrideKey + "-timestamp-certif" );
 
                     final CertifiedAttribute attr = new CertifiedAttribute( );
-                    attr.setKey( StringUtils.removeStart( key, "override-" ) );
+                    attr.setKey( StringUtils.removeStart( overrideKey, "override-" ) );
                     attr.setValue( value );
                     attr.setCertificationProcess( certif );
                     attr.setCertificationDate( new Date( Long.parseLong( timestamp ) ) );

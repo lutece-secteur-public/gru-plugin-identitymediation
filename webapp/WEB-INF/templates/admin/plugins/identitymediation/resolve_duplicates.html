@@ -31,10 +31,10 @@
             let value = $(this).data('value');
             let certif = $(this).data('certif');
             let certifdate = $(this).data('certifdate');
-            let certiftimestamp = $(this).data('certiftimestamp');
+            let certiftimestamp = $(this).data('timestamp-certif');
             $('input[name="override-' + key + '"]').val(value).prop("disabled", false);
             $('input[name="override-' + key + '-certif"]').val(certif).prop("disabled", false);
-            $('input[name="override-' + key + '-certiftimestamp"]').val(certiftimestamp).prop("disabled", false);
+            $('input[name="override-' + key + '-timestamp-certif"]').val(certiftimestamp).prop("disabled", false);
 
             // Hide all arrows on this line.
             $(this).parents('tr').children('td').children('button.arrow-button').hide();
@@ -47,7 +47,7 @@
                                                .append($('<button class="btn btn-danger ms-1 x-button"/>').html('<i class="ti ti-x" aria-hidden="true"></i>').click(function(){
                                                    $('input[name="override-' + key + '"]').val('').prop("disabled", true);
                                                    $('input[name="override-' + key + '-certif"]').val('').prop("disabled", true);
-                                                   $('input[name="override-' + key + '-certiftimestamp"]').val('').prop("disabled", true);
+                                                   $('input[name="override-' + key + '-timestamp-certif"]').val('').prop("disabled", true);
                                                    // Show the arrows again
                                                    $(this).parents('tr').children('td').children('button.arrow-button').show();
                                                    // Remove the fetched attribute value
@@ -88,7 +88,7 @@
                             <td>${readableAttr.name}</td>
                             <input type="hidden" name="override-${readableAttr.keyName}" disabled>
                             <input type="hidden" name="override-${readableAttr.keyName}-certif" disabled>
-                            <input type="hidden" name="override-${readableAttr.keyName}-certiftimestamp" disabled>
+                            <input type="hidden" name="override-${readableAttr.keyName}-timestamp-certif" disabled>
                             <td id="${readableAttr.keyName}-main-td">
                                 <#list identity_to_keep.attributes?filter(a -> a.key == readableAttr.keyName) as attr>
                                     <span id="main-${attr.key}" class="fw-bold">${attr.value}</span>
@@ -104,7 +104,7 @@
                             <td>
                                 <#list identity_to_merge.attributes?filter(a -> a.key == readableAttr.keyName) as attr>
                                     <#if identity_to_keep.attributes?filter(a -> a.key == readableAttr.keyName)?size == 0 && readableAttr.attributeRight.writable >
-                                        <@button class='arrow-button' buttonIcon='arrow-left' params='data-key="${attr.key}" data-value="${attr.value}" data-certif="${attr.certifier}" data-certifdate="${attr.certificationDate?date}" data-certiftimestamp="${attr.certificationDate?long}"' />
+                                        <@button class='arrow-button' buttonIcon='arrow-left' params='data-key="${attr.key}" data-value="${attr.value}" data-certif="${attr.certifier}" data-certifdate="${attr.certificationDate?date}" data-timestamp-certif="${attr.certificationDate?long}"' />
                                     </#if>
                                     <span class="${attr.key}-value">${attr.value}</span>
                                     <#if attr.certifier??>

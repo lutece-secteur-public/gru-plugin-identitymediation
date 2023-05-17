@@ -1,9 +1,10 @@
 <script type="text/javascript">
     $(function(){
         $('.action-box').hide();
-        $('input[name="rule-id"]').click(function(){
+        $('#select-duplicate-type-table tr.rule-tr').click(function(){
+            $(this).find('input:radio').prop('checked', true);
             $('.action-box').show();
-        })
+        });
     });
 </script>
 
@@ -18,7 +19,7 @@
             <@messages errors=errors />
             <@messages warnings=warnings />
 
-            <@table>
+            <@table id='select-duplicate-type-table'>
                 <tr>
                     <th></th>
                     <th>#i18n{identitymediation.choose_duplicate_type.ruleColumn}</th>
@@ -27,7 +28,7 @@
                 </tr>
                 <@tableHeadBodySeparator />
                 <#list duplicate_rule_list as rule>
-                    <tr>
+                    <tr class="rule-tr">
                         <td><input type="radio" name="rule-id" value="${rule.id}"></td>
                         <td>${rule.label}</td>
                         <td>${rule.description}</td>
