@@ -1,5 +1,5 @@
 <style>
-    #resolve-duplicate-table th {
+    #resolve-duplicate-table th, #resolve-duplicate-table .rounded-pill, .override-attr-badge .rounded-pill {
         text-transform: uppercase;
     }
     button.arrow-button, button.x-button {
@@ -10,6 +10,9 @@
     span.non-matching-value {
         font-weight: bold;
         color: red;
+    }
+    .override-attr-badge {
+        border: 1px solid black !important;
     }
 </style>
 <script type="text/javascript">
@@ -39,7 +42,7 @@
             // Hide all arrows on this line.
             $(this).parents('tr').children('td').children('button.arrow-button').hide();
 
-            $('td#' + key + '-main-td').append($('<div id="override-' + key + '-badge" class="badge bg-success" />'));
+            $('td#' + key + '-main-td').append($('<div id="override-' + key + '-badge" class="badge bg-success d-inline-flex override-attr-badge" />'));
             $('div#override-' + key + '-badge').append($('<span/>').html(value))
                                                .append($('<span class="badge rounded-pill mx-1"/>').html(certif))
                                                .append($('<span class="certification-date"/>').html(certifdate))
@@ -53,6 +56,20 @@
                                                    // Remove the fetched attribute value
                                                    $('td#' + key + '-main-td').empty();
                                                }));
+        });
+        $('#merge-btn').click(function () {
+            $('#recap-ul').empty().append($('<li></li>').text("#i18n{identitymediation.resolve_duplicates.mergeEntities}"));
+            let overrideList = $('div[id^=override-]');
+            if (overrideList.length) {
+                $('#recap-ul').append($('<li></li>').text("#i18n{identitymediation.resolve_duplicates.copyAttributes} :")
+                                                    .append($('<ul id="attr-recap-ul"></ul>')));
+                $(overrideList).each(function () {
+                    let label = $(this).parents('tr').children('td:first-child').text().trim();
+                    let attr = $(this).clone();
+                    attr.removeAttr('id').children('.x-button').remove();
+                    $('#attr-recap-ul').append($('<li></li>').text(label + ' : ').append(attr));
+                });
+            }
         });
     });
 </script>
@@ -123,12 +140,50 @@
     </@rowBox>
     <@rowBox boxClass="action-box">
         <@boxBody>
-            <button id="merge-btn" class="btn btn-warning" name="action_mergeDuplicate" >
+            <button id="merge-btn" type="button" class="btn btn-warning" data-bs-toggle="modal" data-bs-target="#merge-modal" >
                 #i18n{identitymediation.resolve_duplicates.buttonMergeDuplicate}
             </button>
-            <button id="exclude-btn" class="btn btn-warning" name="action_excludeDuplicate" >
+            <button id="exclude-btn" type="button" class="btn btn-warning" data-bs-toggle="modal" data-bs-target="#exclude-modal" >
                 #i18n{identitymediation.resolve_duplicates.buttonExcludeDuplicate}
+            </button>
+            <button class="btn btn-secondary" name="action_cancel" >
+                #i18n{identitymediation.resolve_duplicates.buttonCancel}
             </button>
         </@boxBody>
     </@rowBox>
+    <div class="modal fade" id="merge-modal" tabindex="-1" aria-labelledby="mergeModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="mergeModalLabel">#i18n{identitymediation.resolve_duplicates.confirm}</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    #i18n{identitymediation.resolve_duplicates.confirmMerge}
+                    <ul id="recap-ul"></ul>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">#i18n{identitymediation.resolve_duplicates.buttonCancel}</button>
+                    <button class="btn btn-primary" name="action_mergeDuplicate">#i18n{identitymediation.resolve_duplicates.buttonMergeDuplicate}</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="modal fade" id="exclude-modal" tabindex="-1" aria-labelledby="excludeModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="excludeModalLabel">#i18n{identitymediation.resolve_duplicates.confirm}</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    #i18n{identitymediation.resolve_duplicates.confirmExclude}
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">#i18n{identitymediation.resolve_duplicates.buttonCancel}</button>
+                    <button class="btn btn-primary" name="action_excludeDuplicate">#i18n{identitymediation.resolve_duplicates.buttonExcludeDuplicate}</button>
+                </div>
+            </div>
+        </div>
+    </div>
 </form>

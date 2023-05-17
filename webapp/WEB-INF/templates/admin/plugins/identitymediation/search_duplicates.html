@@ -1,3 +1,8 @@
+<style>
+    #search-duplicates-table .rounded-pill {
+        text-transform: uppercase;
+    }
+</style>
 <form class="form-inline" action="jsp/admin/plugins/identitymediation/IdentityDuplicate.jsp">
     <@rowBox>
         <@boxHeader i18nTitleKey="identitymediation.potential_duplicates.title">
@@ -10,7 +15,7 @@
             <@messages warnings=warnings />
 
             <#if service_contract??>
-                <@table>
+                <@table id='search-duplicates-table'>
                     <tr>
                         <#list service_contract.attributeDefinitions?filter(a -> a.attributeRight.readable) as readableAttr>
                             <th>${readableAttr.name}</th>

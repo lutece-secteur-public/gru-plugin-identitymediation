@@ -1,7 +1,7 @@
 <script type="text/javascript">
-    $(function(){
+    $(function () {
         $('.action-box').hide();
-        $('#select-duplicate-type-table tr.rule-tr').click(function(){
+        $('#select-duplicate-type-table tr.rule-tr').click(function () {
             $(this).find('input:radio').prop('checked', true);
             $('.action-box').show();
         });
@@ -38,7 +38,7 @@
             </@table>
         </@boxBody>
     </@rowBox>
-    <@rowBox boxClass="action-box">
+    <@rowBox boxClass="action-box" >
         <@boxBody>
             <button id="search-btn" class="btn btn-warning" name="view_searchDuplicates" >
                 #i18n{identitymediation.choose_duplicate_type.buttonSearch}

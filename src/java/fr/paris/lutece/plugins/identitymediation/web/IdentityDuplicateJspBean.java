@@ -88,6 +88,7 @@ public class IdentityDuplicateJspBean extends MVCAdminJspBean
     private static final String ACTION_SWAP_IDENTITIES = "swapIdentities";
     private static final String ACTION_MERGE_DUPLICATE = "mergeDuplicate";
     private static final String ACTION_EXCLUDE_DUPLICATE = "excludeDuplicate";
+    private static final String ACTION_CANCEL = "cancel";
 
     // Templates
     private static final String TEMPLATE_CHOOSE_DUPLICATE_TYPE = "/admin/plugins/identitymediation/choose_duplicate_type.html";
@@ -126,7 +127,6 @@ public class IdentityDuplicateJspBean extends MVCAdminJspBean
     @View( value = VIEW_CHOOSE_DUPLICATE_TYPE, defaultView = true )
     public String getDuplicateTypes( final HttpServletRequest request )
     {
-
         initClientCode( request );
         initServiceContract( _currentClientCode );
 
@@ -135,7 +135,7 @@ public class IdentityDuplicateJspBean extends MVCAdminJspBean
         {
             duplicateRules.addAll( fetchDuplicateRules( ) );
         }
-        catch( IdentityStoreException e )
+        catch( final IdentityStoreException e )
         {
             AppLogService.error( "Error while fetching duplicate calculation rules.", e );
             addError( MESSAGE_FETCH_DUPLICATE_HOLDERS_ERROR, getLocale( ) );
@@ -253,7 +253,7 @@ public class IdentityDuplicateJspBean extends MVCAdminJspBean
 
             return list;
         }
-        catch( Exception e )
+        catch( final Exception e )
         {
             throw new IdentityStoreException( "error", e );
         }
@@ -297,7 +297,7 @@ public class IdentityDuplicateJspBean extends MVCAdminJspBean
             identityList.addAll( duplicateList );
             sortByQuality( identityList );
         }
-        catch( IdentityStoreException e )
+        catch( final IdentityStoreException e )
         {
             addError( MESSAGE_FETCH_DUPLICATES_ERROR, getLocale( ) );
             return getDuplicateTypes( request );
@@ -380,7 +380,7 @@ public class IdentityDuplicateJspBean extends MVCAdminJspBean
      * @return
      */
     @Action( ACTION_MERGE_DUPLICATE )
-    public String doMergeDuplicate( HttpServletRequest request )
+    public String doMergeDuplicate( final HttpServletRequest request )
     {
         if ( _identityToKeep == null || _identityToMerge == null || _identityToMerge.equals( _identityToKeep ) )
         {
@@ -393,6 +393,10 @@ public class IdentityDuplicateJspBean extends MVCAdminJspBean
         }
         // TODO send merge duplicate request
 
+        releaseAcknoledgement( _identityToKeep, _identityToMerge );
+        _identityToKeep = null;
+        _identityToMerge = null;
+
         addInfo( MESSAGE_MERGE_DUPLICATES_SUCCESS, getLocale( ) );
         return getDuplicateTypes( request );
     }
@@ -404,7 +408,7 @@ public class IdentityDuplicateJspBean extends MVCAdminJspBean
      * @return
      */
     @Action( ACTION_EXCLUDE_DUPLICATE )
-    public String doExcludeDuplicate( HttpServletRequest request )
+    public String doExcludeDuplicate( final HttpServletRequest request )
     {
         if ( _identityToKeep == null || _identityToMerge == null || _identityToMerge.equals( _identityToKeep ) )
         {
@@ -412,17 +416,52 @@ public class IdentityDuplicateJspBean extends MVCAdminJspBean
         }
         // TODO send exclude duplicate request
 
+        releaseAcknoledgement( _identityToKeep, _identityToMerge );
+        _identityToKeep = null;
+        _identityToMerge = null;
+
         addInfo( MESSAGE_EXCLUDE_DUPLICATES_SUCCESS, getLocale( ) );
         return getDuplicateTypes( request );
     }
 
     /**
+     * Cancel and release the acknolegement for the 2 selected identities.
+     *
+     * @param request
+     * @return
+     */
+    @Action( ACTION_CANCEL )
+    public String doCancel( final HttpServletRequest request )
+    {
+        if ( _identityToKeep == null || _identityToMerge == null )
+        {
+            throw new RuntimeException( "error" ); // TODO
+        }
+
+        releaseAcknoledgement( _identityToKeep, _identityToMerge );
+        _identityToKeep = null;
+        _identityToMerge = null;
+        return getDuplicateTypes( request );
+    }
+
+    /**
      * Send an acknolegement to the backend to mark both identities as being currently resolved.
-     * 
+     *
      * @param identity1
      * @param identity2
      */
     private void sendAcknoledgement( final QualifiedIdentity identity1, final QualifiedIdentity identity2 )
+    {
+        // FIXME mock for now
+    }
+
+    /**
+     * Send an acknolegement release to the backend for both identities.
+     *
+     * @param identity1
+     * @param identity2
+     */
+    private void releaseAcknoledgement( final QualifiedIdentity identity1, final QualifiedIdentity identity2 )
     {
         // FIXME mock for now
     }
@@ -443,8 +482,8 @@ public class IdentityDuplicateJspBean extends MVCAdminJspBean
     private void initIdentityToKeep( final String customerId ) throws IdentityStoreException
     {
         _identityToKeep = getQualifiedIdentityFromCustomerId( customerId );
-        _identityToKeep.setAttributes(
-                _identityToKeep.getAttributes( ).stream( ).filter( a -> !a.getKey( ).equals( "mobile_phone" ) ).collect( Collectors.toList( ) ) );
+        _identityToKeep.setAttributes( _identityToKeep.getAttributes( ).stream( )
+                .filter( a -> !a.getKey( ).equals( "mobile_phone" ) && !a.getKey( ).equals( "preferred_username" ) ).collect( Collectors.toList( ) ) );
     }
 
     /**
@@ -473,7 +512,7 @@ public class IdentityDuplicateJspBean extends MVCAdminJspBean
         {
             return new ObjectMapper( ).readValue( "{\"scoring\":1,\"quality\":82,\"coverage\":66,\"connection_id\":\"mock-connection-id-2\",\"customer_id\":\""
                     + customerId
-                    + "\",\"attributes\":[{\"key\":\"birthdate\",\"value\":\"22/11/1940\",\"type\":\"string\",\"certificationLevel\":300,\"certifier\":\"mail\",\"certificationDate\":\"2023-05-03\"},{\"key\":\"family_name\",\"value\":\"Durand\",\"type\":\"string\",\"certificationLevel\":700,\"certifier\":\"r2p\",\"certificationDate\":\"2023-05-03\"},{\"key\":\"first_name\",\"value\":\"Gilles\",\"type\":\"string\",\"certificationLevel\":600,\"certifier\":\"agent\",\"certificationDate\":\"2023-05-03\"},{\"key\":\"mobile_phone\",\"value\":\"06.66.32.89.01\",\"type\":\"string\",\"certificationLevel\":600,\"certifier\":\"sms\",\"certificationDate\":\"2023-05-03\"}]}",
+                    + "\",\"attributes\":[{\"key\":\"birthdate\",\"value\":\"22/11/1940\",\"type\":\"string\",\"certificationLevel\":300,\"certifier\":\"mail\",\"certificationDate\":\"2023-05-03\"},{\"key\":\"family_name\",\"value\":\"Durand\",\"type\":\"string\",\"certificationLevel\":700,\"certifier\":\"r2p\",\"certificationDate\":\"2023-05-03\"},{\"key\":\"first_name\",\"value\":\"Gilles\",\"type\":\"string\",\"certificationLevel\":600,\"certifier\":\"agent\",\"certificationDate\":\"2023-05-03\"},{\"key\":\"mobile_phone\",\"value\":\"06.66.32.89.01\",\"type\":\"string\",\"certificationLevel\":600,\"certifier\":\"sms\",\"certificationDate\":\"2023-05-03\"},{\"key\":\"preferred_username\",\"value\":\"Dupont\",\"type\":\"string\",\"certificationLevel\":700,\"certifier\":\"fc\",\"certificationDate\":\"2023-05-05\"}]}",
                     QualifiedIdentity.class );
         }
         catch( final Exception e )
@@ -554,7 +593,7 @@ public class IdentityDuplicateJspBean extends MVCAdminJspBean
     }
 
     /**
-     * Build the update request in case of attributes taken from a duplicate.
+     * Build the update request in case of attributes copied from a duplicate.
      * 
      * @return the request ready to be sent, null if no update needed.
      */

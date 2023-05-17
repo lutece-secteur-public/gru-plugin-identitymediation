@@ -1,11 +1,11 @@
 <style>
-    #select-identities-table th {
+    #select-identities-table th, #select-identities-table .rounded-pill {
         text-transform: uppercase;
     }
 </style>
 <script type="text/javascript">
     $(function () {
-        $('.action-box').hide();
+        $('#continue-btn').hide();
         $('.selected-identity-btn').hide();
 
         $('button.select-identity-btn').click(function () {
@@ -13,7 +13,7 @@
             $(this).parent().children('.selected-identity-btn').show();
             $("input[value='" + $(this).data('cuid') + "']").prop('disabled', false);
             if ($('.selected-identity-btn:visible').length === 2) {
-                $('div.action-box').show();
+                $('#continue-btn').show();
                 $('button.select-identity-btn').prop('disabled', true);
             }
         });
@@ -21,7 +21,7 @@
             $(this).hide();
             $(this).parent().children('.select-identity-btn').show();
             $("input[value='" + $(this).data('cuid') + "']").prop('disabled', true);
-            $('div.action-box').hide();
+            $('#continue-btn').hide();
             $('button.select-identity-btn').prop('disabled', false);
         });
     });
@@ -90,8 +90,11 @@
     </@rowBox>
     <@rowBox boxClass="action-box">
         <@boxBody>
-            <button id="countinue-btn" class="btn btn-warning" name="view_resolveDuplicates" >
+            <button id="continue-btn" class="btn btn-warning" name="view_resolveDuplicates" >
                 #i18n{identitymediation.select_identities.buttonContinue}
+            </button>
+            <button class="btn btn-secondary" name="view_chooseDuplicateType" >
+                #i18n{identitymediation.resolve_duplicates.buttonCancel}
             </button>
         </@boxBody>
     </@rowBox>
