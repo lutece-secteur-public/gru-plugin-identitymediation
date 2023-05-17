@@ -328,13 +328,23 @@ public class IdentityDuplicateJspBean extends MVCAdminJspBean
         }
         try
         {
-            initIdentityToKeep( cuidList.get( 0 ) );
-            initIdentityToMerge( cuidList.get( 1 ) );
-            if ( _identityToKeep == null || _identityToMerge == null )
+            final QualifiedIdentity identity1 = getQualifiedIdentityFromCustomerId( cuidList.get( 0 ) );
+            // FIXME MOCK DATA, TO DELETE
+            identity1.setAttributes( identity1.getAttributes( ).stream( )
+                    .filter( a -> !a.getKey( ).equals( "mobile_phone" ) && !a.getKey( ).equals( "preferred_username" ) ).collect( Collectors.toList( ) ) );
+            //
+
+            final QualifiedIdentity identity2 = getQualifiedIdentityFromCustomerId( cuidList.get( 1 ) );
+            // FIXME MOCK DATA, TO DELETE
+            // identity2.setAttributes( identity2.getAttributes( ).stream( ).filter( a -> !a.getKey( ).equals( "login" ) ).collect( Collectors.toList( ) ) );
+            //
+
+            if ( identity1 == null || identity2 == null )
             {
                 addError( MESSAGE_GET_IDENTITY_ERROR, getLocale( ) );
                 return getDuplicateTypes( request );
             }
+            setWorkedIdentities( identity1, identity2 );
         }
         catch( final IdentityStoreException e )
         {
@@ -477,21 +487,56 @@ public class IdentityDuplicateJspBean extends MVCAdminJspBean
     }
 
     /**
-     * FIXME MOCK, TO DELETE
+     * Init worked identities for resolve duplicate screen. Identity to keep is set with the identity having a login attribute (Mon Paris account), and/or
+     * better quality score.
+     * 
+     * @param identity1
+     * @param identity2
      */
-    private void initIdentityToKeep( final String customerId ) throws IdentityStoreException
+    private void setWorkedIdentities( final QualifiedIdentity identity1, final QualifiedIdentity identity2 )
     {
-        _identityToKeep = getQualifiedIdentityFromCustomerId( customerId );
-        _identityToKeep.setAttributes( _identityToKeep.getAttributes( ).stream( )
-                .filter( a -> !a.getKey( ).equals( "mobile_phone" ) && !a.getKey( ).equals( "preferred_username" ) ).collect( Collectors.toList( ) ) );
-    }
-
-    /**
-     * FIXME MOCK, TO DELETE
-     */
-    private void initIdentityToMerge( final String customerId ) throws IdentityStoreException
-    {
-        _identityToMerge = getQualifiedIdentityFromCustomerId( customerId );
+        if ( identity1.getAttributes( ).stream( ).anyMatch( a -> a.getKey( ).equals( "login" ) ) )
+        {
+            if ( identity2.getAttributes( ).stream( ).anyMatch( a -> a.getKey( ).equals( "login" ) ) )
+            {
+                if ( identity1.getQuality( ) >= identity2.getQuality( ) )
+                {
+                    _identityToKeep = identity1;
+                    _identityToMerge = identity2;
+                }
+                else
+                {
+                    _identityToKeep = identity2;
+                    _identityToMerge = identity1;
+                }
+            }
+            else
+            {
+                _identityToKeep = identity1;
+                _identityToMerge = identity2;
+            }
+        }
+        else
+        {
+            if ( identity2.getAttributes( ).stream( ).anyMatch( a -> a.getKey( ).equals( "login" ) ) )
+            {
+                _identityToKeep = identity2;
+                _identityToMerge = identity1;
+            }
+            else
+            {
+                if ( identity1.getQuality( ) >= identity2.getQuality( ) )
+                {
+                    _identityToKeep = identity1;
+                    _identityToMerge = identity2;
+                }
+                else
+                {
+                    _identityToKeep = identity2;
+                    _identityToMerge = identity1;
+                }
+            }
+        }
     }
 
     /**
@@ -512,7 +557,7 @@ public class IdentityDuplicateJspBean extends MVCAdminJspBean
         {
             return new ObjectMapper( ).readValue( "{\"scoring\":1,\"quality\":82,\"coverage\":66,\"connection_id\":\"mock-connection-id-2\",\"customer_id\":\""
                     + customerId
-                    + "\",\"attributes\":[{\"key\":\"birthdate\",\"value\":\"22/11/1940\",\"type\":\"string\",\"certificationLevel\":300,\"certifier\":\"mail\",\"certificationDate\":\"2023-05-03\"},{\"key\":\"family_name\",\"value\":\"Durand\",\"type\":\"string\",\"certificationLevel\":700,\"certifier\":\"r2p\",\"certificationDate\":\"2023-05-03\"},{\"key\":\"first_name\",\"value\":\"Gilles\",\"type\":\"string\",\"certificationLevel\":600,\"certifier\":\"agent\",\"certificationDate\":\"2023-05-03\"},{\"key\":\"mobile_phone\",\"value\":\"06.66.32.89.01\",\"type\":\"string\",\"certificationLevel\":600,\"certifier\":\"sms\",\"certificationDate\":\"2023-05-03\"},{\"key\":\"preferred_username\",\"value\":\"Dupont\",\"type\":\"string\",\"certificationLevel\":700,\"certifier\":\"fc\",\"certificationDate\":\"2023-05-05\"}]}",
+                    + "\",\"attributes\":[{\"key\":\"birthdate\",\"value\":\"22/11/1940\",\"type\":\"string\",\"certificationLevel\":300,\"certifier\":\"mail\",\"certificationDate\":\"2023-05-03\"},{\"key\":\"family_name\",\"value\":\"Durand\",\"type\":\"string\",\"certificationLevel\":700,\"certifier\":\"r2p\",\"certificationDate\":\"2023-05-03\"},{\"key\":\"first_name\",\"value\":\"Gilles\",\"type\":\"string\",\"certificationLevel\":600,\"certifier\":\"agent\",\"certificationDate\":\"2023-05-03\"},{\"key\":\"mobile_phone\",\"value\":\"06.66.32.89.01\",\"type\":\"string\",\"certificationLevel\":600,\"certifier\":\"sms\",\"certificationDate\":\"2023-05-03\"},{\"key\":\"preferred_username\",\"value\":\"Dupont\",\"type\":\"string\",\"certificationLevel\":700,\"certifier\":\"fc\",\"certificationDate\":\"2023-05-05\"},{\"key\":\"login\",\"value\":\"login@monparis.fr\",\"type\":\"string\",\"certificationLevel\":400,\"certifier\":\"mail\",\"certificationDate\":\"2023-05-13\"}]}",
                     QualifiedIdentity.class );
         }
         catch( final Exception e )
@@ -539,7 +584,7 @@ public class IdentityDuplicateJspBean extends MVCAdminJspBean
                     "{\"scoring\":1,\"quality\":77,\"coverage\":66,\"connection_id\":\"mock-connection-id-3\",\"customer_id\":\"mock-cuid-3\",\"attributes\":[{\"key\":\"birthdate\",\"value\":\"22/11/1940\",\"type\":\"string\",\"certificationLevel\":300,\"certifier\":\"mail\",\"certificationDate\":\"2023-05-03\"},{\"key\":\"family_name\",\"value\":\"Durand\",\"type\":\"string\",\"certificationLevel\":700,\"certifier\":\"r2p\",\"certificationDate\":\"2023-05-03\"},{\"key\":\"first_name\",\"value\":\"Gille\",\"type\":\"string\",\"certificationLevel\":600,\"certifier\":\"agent\",\"certificationDate\":\"2023-05-03\"},{\"key\":\"mobile_phone\",\"value\":\"06.66.32.89.01\",\"type\":\"string\",\"certificationLevel\":600,\"certifier\":\"sms\",\"certificationDate\":\"2023-05-03\"}]}",
                     QualifiedIdentity.class ) );
             list.add( mapper.readValue(
-                    "{\"scoring\":1,\"quality\":79,\"coverage\":66,\"connection_id\":\"mock-connection-id-4\",\"customer_id\":\"mock-cuid-4\",\"attributes\":[{\"key\":\"birthdate\",\"value\":\"22/11/1940\",\"type\":\"string\",\"certificationLevel\":300,\"certifier\":\"mail\",\"certificationDate\":\"2023-05-03\"},{\"key\":\"family_name\",\"value\":\"Durant\",\"type\":\"string\",\"certificationLevel\":700,\"certifier\":\"r2p\",\"certificationDate\":\"2023-05-03\"},{\"key\":\"first_name\",\"value\":\"Gilles\",\"type\":\"string\",\"certificationLevel\":500,\"certifier\":\"agent\",\"certificationDate\":\"2023-05-03\"},{\"key\":\"mobile_phone\",\"value\":\"06.12.23.34.45\",\"type\":\"string\",\"certificationLevel\":600,\"certifier\":\"sms\",\"certificationDate\":\"2023-05-03\"}]}",
+                    "{\"scoring\":1,\"quality\":79,\"coverage\":66,\"connection_id\":\"mock-connection-id-4\",\"customer_id\":\"mock-cuid-4\",\"attributes\":[{\"key\":\"birthdate\",\"value\":\"22/11/1940\",\"type\":\"string\",\"certificationLevel\":300,\"certifier\":\"mail\",\"certificationDate\":\"2023-05-03\"},{\"key\":\"family_name\",\"value\":\"Durant\",\"type\":\"string\",\"certificationLevel\":700,\"certifier\":\"r2p\",\"certificationDate\":\"2023-05-03\"},{\"key\":\"first_name\",\"value\":\"Gilles\",\"type\":\"string\",\"certificationLevel\":500,\"certifier\":\"agent\",\"certificationDate\":\"2023-05-03\"},{\"key\":\"mobile_phone\",\"value\":\"06.12.23.34.45\",\"type\":\"string\",\"certificationLevel\":600,\"certifier\":\"sms\",\"certificationDate\":\"2023-05-03\"},{\"key\":\"login\",\"value\":\"login@monparis.fr\",\"type\":\"string\",\"certificationLevel\":400,\"certifier\":\"mail\",\"certificationDate\":\"2023-05-13\"}]}",
                     QualifiedIdentity.class ) );
             list.add( mapper.readValue(
                     "{\"scoring\":1,\"quality\":81,\"coverage\":66,\"connection_id\":\"mock-connection-id-5\",\"customer_id\":\"mock-cuid-5\",\"attributes\":[{\"key\":\"birthdate\",\"value\":\"22/11/1940\",\"type\":\"string\",\"certificationLevel\":300,\"certifier\":\"mail\",\"certificationDate\":\"2023-05-03\"},{\"key\":\"family_name\",\"value\":\"Durant\",\"type\":\"string\",\"certificationLevel\":700,\"certifier\":\"r2p\",\"certificationDate\":\"2023-05-03\"},{\"key\":\"first_name\",\"value\":\"Gilles\",\"type\":\"string\",\"certificationLevel\":500,\"certifier\":\"agent\",\"certificationDate\":\"2023-05-03\"},{\"key\":\"mobile_phone\",\"value\":\"06.31.55.63.28\",\"type\":\"string\",\"certificationLevel\":600,\"certifier\":\"sms\",\"certificationDate\":\"2023-05-03\"}]}",

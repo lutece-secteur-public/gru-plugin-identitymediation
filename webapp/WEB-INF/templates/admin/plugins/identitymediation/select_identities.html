@@ -46,7 +46,10 @@
                         <#list identity_list as identity>
                             <th class="fw-normal">
                                 <div class="col-12">#i18n{identitymediation.select_identities.identity} ${count}</div>
-                                <span class="quality-span">${identity.quality}</span> %
+                                <div class="col-12"><span class="quality-span">${identity.quality}</span> %</div>
+                                <#list identity.attributes?filter(a -> a.key == 'login') as attr>
+                                    <span class="badge">MON PARIS</span>
+                                </#list>
                                 <input type="hidden" name="identity-cuid-${count}" value="${identity.customerId}" disabled >
                             </th>
                             <#assign count = count + 1>

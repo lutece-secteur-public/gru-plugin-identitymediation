@@ -17,6 +17,16 @@
 </style>
 <script type="text/javascript">
     $(function() {
+        let monParisBadgeCount = $('.mon-paris-badge').length;
+        if (monParisBadgeCount === 1) {
+            $('#swap-button').prop('disabled', true)
+                             .parent('span').prop('title', "#i18n{identitymediation.resolve_duplicates.noSwapTitle}");
+        } else if (monParisBadgeCount === 2) {
+            $('#swap-button').prop('disabled', true);
+            $('#merge-btn').hide();
+            $('#exclude-btn').hide();
+            $('#notify-btn').show();
+        }
         $('span[id^="main-"]').each(function() {
             let value = $(this).text().trim().toUpperCase();
             if (value) {
@@ -91,12 +101,22 @@
                         <th style="width: 400px;">&nbsp;</th>
                         <th style="width: 500px;">
                             <div class="col-12">#i18n{identitymediation.resolve_duplicates.identityToKeep}</div>
-                            <span class="quality-span">${identity_to_keep.quality}</span> %
+                            <div class="col-12"><span class="quality-span">${identity_to_keep.quality}</span> %</div>
+                            <#list identity_to_keep.attributes?filter(a -> a.key == 'login') as attr>
+                                <span class="badge mon-paris-badge">MON PARIS</span>
+                            </#list>
                         </th>
-                        <th style="width: 300px;"><@button buttonIcon='arrows-left-right' type='submit' name="action_swapIdentities"/></th>
+                        <th style="width: 300px;">
+                            <span>
+                                <@button buttonIcon='arrows-left-right' id='swap-button' type='submit' name="action_swapIdentities"/>
+                            </span>
+                        </th>
                         <th class="fw-normal">
                             <div class="col-12">#i18n{identitymediation.resolve_duplicates.identityToMerge}</div>
-                            <span class="quality-span">${identity_to_merge.quality}</span> %
+                            <div class="col-12"><span class="quality-span">${identity_to_merge.quality}</span> %</div>
+                            <#list identity_to_merge.attributes?filter(a -> a.key == 'login') as attr>
+                                <span class="badge mon-paris-badge">MON PARIS</span>
+                            </#list>
                         </th>
                     </tr>
                     <@tableHeadBodySeparator />
@@ -146,6 +166,9 @@
             <button id="exclude-btn" type="button" class="btn btn-warning" data-bs-toggle="modal" data-bs-target="#exclude-modal" >
                 #i18n{identitymediation.resolve_duplicates.buttonExcludeDuplicate}
             </button>
+            <button id="notify-btn" type="button" class="btn btn-warning" data-bs-toggle="modal" data-bs-target="#notify-modal" style="display: none;">
+                #i18n{identitymediation.resolve_duplicates.buttonNotifyUsers}
+            </button>
             <button class="btn btn-secondary" name="action_cancel" >
                 #i18n{identitymediation.resolve_duplicates.buttonCancel}
             </button>
@@ -182,6 +205,22 @@
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">#i18n{identitymediation.resolve_duplicates.buttonCancel}</button>
                     <button class="btn btn-primary" name="action_excludeDuplicate">#i18n{identitymediation.resolve_duplicates.buttonExcludeDuplicate}</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="modal fade" id="notify-modal" tabindex="-1" aria-labelledby="notifyModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="notifyModalLabel">#i18n{identitymediation.resolve_duplicates.confirm}</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    Fonctionnalité non développée.
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">#i18n{identitymediation.resolve_duplicates.buttonCancel}</button>
                 </div>
             </div>
         </div>
