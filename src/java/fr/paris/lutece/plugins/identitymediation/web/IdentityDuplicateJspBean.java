@@ -41,7 +41,12 @@ import fr.paris.lutece.plugins.identitystore.v3.web.rs.dto.contract.ServiceContr
 import fr.paris.lutece.plugins.identitystore.v3.web.rs.dto.crud.CertifiedAttribute;
 import fr.paris.lutece.plugins.identitystore.v3.web.rs.dto.crud.Identity;
 import fr.paris.lutece.plugins.identitystore.v3.web.rs.dto.crud.IdentityChangeRequest;
+import fr.paris.lutece.plugins.identitystore.v3.web.rs.dto.duplicate.DuplicateRuleSummaryDto;
+import fr.paris.lutece.plugins.identitystore.v3.web.rs.dto.duplicate.DuplicateRuleSummarySearchResponse;
+import fr.paris.lutece.plugins.identitystore.v3.web.rs.dto.duplicate.DuplicateRuleSummarySearchStatusType;
 import fr.paris.lutece.plugins.identitystore.v3.web.rs.dto.search.QualifiedIdentity;
+import fr.paris.lutece.plugins.identitystore.v3.web.service.IdentityQualityService;
+import fr.paris.lutece.plugins.identitystore.v3.web.service.ServiceContractService;
 import fr.paris.lutece.plugins.identitystore.web.exception.IdentityStoreException;
 import fr.paris.lutece.portal.service.spring.SpringContextService;
 import fr.paris.lutece.portal.service.util.AppLogService;
@@ -55,6 +60,7 @@ import org.apache.commons.lang3.StringUtils;
 
 import javax.servlet.http.HttpServletRequest;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Comparator;
 import java.util.Date;
 import java.util.List;
@@ -69,6 +75,7 @@ public class IdentityDuplicateJspBean extends MVCAdminJspBean
 {
     // Messages
     private static final String MESSAGE_FETCH_DUPLICATE_RULES_ERROR = "identitymediation.message.fetch_duplicate_rules.error";
+    private static final String MESSAGE_FETCH_DUPLICATE_RULES_NORESULT = "identitymediation.message.fetch_duplicate_rules.noresult";
     private static final String MESSAGE_FETCH_DUPLICATE_HOLDERS_ERROR = "identitymediation.message.fetch_duplicate_holders.error";
     private static final String MESSAGE_FETCH_DUPLICATE_HOLDERS_NORESULT = "identitymediation.message.fetch_duplicate_holders.noresult";
     private static final String MESSAGE_GET_SERVICE_CONTRACT_ERROR = "identitymediation.message.get_service_contract.error";
@@ -110,8 +117,13 @@ public class IdentityDuplicateJspBean extends MVCAdminJspBean
     private static final String MARK_IDENTITY_TO_KEEP = "identity_to_keep";
     private static final String MARK_IDENTITY_TO_MERGE = "identity_to_merge";
 
-    // Cache
+    // Beans
     private static final ServiceContractCache _serviceContractCache = SpringContextService.getBean( "identitymediation.serviceContractCache" );
+    private static final IdentityQualityService _serviceQuality = SpringContextService.getBean("identityQualityService.rest.httpAccess");
+    private static final ServiceContractService _serviceContractService = SpringContextService.getBean("serviceContract.rest.httpAccess");
+
+    // Properties
+    private final List<String> _sortedAttributeKeyList = Arrays.asList(AppPropertiesService.getProperty("identitymediation.attribute.order").split(","));
 
     // Session variable to store working values
     private ServiceContractDto _serviceContract;
@@ -130,7 +142,7 @@ public class IdentityDuplicateJspBean extends MVCAdminJspBean
         initClientCode( request );
         initServiceContract( _currentClientCode );
 
-        final List<DuplicateRules> duplicateRules = new ArrayList<>( );
+        final List<DuplicateRuleSummaryDto> duplicateRules = new ArrayList<>( );
         try
         {
             duplicateRules.addAll( fetchDuplicateRules( ) );
@@ -138,7 +150,7 @@ public class IdentityDuplicateJspBean extends MVCAdminJspBean
         catch( final IdentityStoreException e )
         {
             AppLogService.error( "Error while fetching duplicate calculation rules.", e );
-            addError( MESSAGE_FETCH_DUPLICATE_HOLDERS_ERROR, getLocale( ) );
+            addError( MESSAGE_FETCH_DUPLICATE_RULES_ERROR, getLocale( ) );
         }
 
         final Map<String, Object> model = getModel( );
@@ -148,13 +160,20 @@ public class IdentityDuplicateJspBean extends MVCAdminJspBean
         return getPage( PROPERTY_PAGE_TITLE_CHOOSE_DUPLICATE_TYPE, TEMPLATE_CHOOSE_DUPLICATE_TYPE, model );
     }
 
-    private List<DuplicateRules> fetchDuplicateRules( ) throws IdentityStoreException
-    {
-        // TODO mock for now
-        final List<DuplicateRules> duplicateRules = new ArrayList<>( );
-        duplicateRules.add( new DuplicateRules( "1", "Doublons stricts", "Description de la règle de détection des doublons stricts", 2 ) );
-        duplicateRules.add( new DuplicateRules( "2", "Doublon approximé", "Description de la règle de détection des doublons approximés", 0 ) );
-        return duplicateRules;
+    private List<DuplicateRuleSummaryDto> fetchDuplicateRules() throws IdentityStoreException {
+        final DuplicateRuleSummarySearchResponse response = _serviceQuality.getAllDuplicateRules(_currentClientCode);
+        if (response == null) {
+            throw new IdentityStoreException("DuplicateRuleSummarySearchResponse is null.");
+        }
+        if (response.getStatus() == DuplicateRuleSummarySearchStatusType.FAILURE) {
+            throw new IdentityStoreException("Status of DuplicateRuleSummarySearchResponse is FAILURE. Message = " +
+                                             response.getStatus().getMessage());
+        }
+        if (response.getStatus() == DuplicateRuleSummarySearchStatusType.NOT_FOUND || CollectionUtils.isEmpty(response.getDuplicateRuleSummaries())) {
+            AppLogService.error("No duplicate rules found.");
+            addError(MESSAGE_FETCH_DUPLICATE_RULES_NORESULT, getLocale());
+        }
+        return response.getDuplicateRuleSummaries();
     }
 
     /**
@@ -623,17 +642,28 @@ public class IdentityDuplicateJspBean extends MVCAdminJspBean
         {
             try
             {
-                // _serviceContract = _serviceContractCache.get( clientCode );
-                // FIXME mock for now
-                _serviceContract = new ObjectMapper( ).readValue(
-                        "{\"attributeDefinitions\":[{\"attributeRequirement\":{\"level\":\"100\",\"name\":\"Aucune certification - auto déclaratif\",\"description\":\"Juste une identité sans compte\"},\"attributeRight\":{\"searchable\":true,\"readable\":true,\"writable\":true},\"attributeCertifications\":[{\"code\":\"mon_paris\",\"label\":\"Mon Paris\",\"level\":\"300\"},{\"code\":\"pj\",\"label\":\"Certifiable PJ\",\"level\":\"400\"},{\"code\":\"agent\",\"label\":\"Certifiable Agent pièce originale\",\"level\":\"500\"},{\"code\":\"r2p\",\"label\":\"Certifiable R2P\",\"level\":\"700\"},{\"code\":\"fc\",\"label\":\"Certfiable France Connect\",\"level\":\"700\"}],\"certifiable\":false,\"pivot\":false,\"keyWeight\":0,\"keyName\":\"gender\",\"description\":\"0:Non défini /  1:Homme / 2:Femme\",\"type\":\"STRING\",\"name\":\"Genre\"},{\"attributeRequirement\":{\"level\":\"100\",\"name\":\"Aucune certification - auto déclaratif\",\"description\":\"Juste une identité sans compte\"},\"attributeRight\":{\"searchable\":true,\"readable\":true,\"writable\":true},\"attributeCertifications\":[{\"code\":\"pj\",\"label\":\"Certifiable PJ\",\"level\":\"400\"},{\"code\":\"agent\",\"label\":\"Certifiable Agent pièce originale\",\"level\":\"500\"},{\"code\":\"r2p\",\"label\":\"Certifiable R2P\",\"level\":\"700\"},{\"code\":\"fc\",\"label\":\"Certfiable France Connect\",\"level\":\"700\"}],\"certifiable\":false,\"pivot\":false,\"keyWeight\":0,\"keyName\":\"family_name\",\"description\":\"\",\"type\":\"STRING\",\"name\":\"Nom de famille de naissance\"},{\"attributeRequirement\":null,\"attributeRight\":{\"searchable\":true,\"readable\":true,\"writable\":true},\"attributeCertifications\":[{\"code\":\"fc\",\"label\":\"Certfiable France Connect\",\"level\":\"100\"}],\"certifiable\":false,\"pivot\":false,\"keyWeight\":0,\"keyName\":\"preferred_username\",\"description\":\"\",\"type\":\"STRING\",\"name\":\"Nom usuel\"},{\"attributeRequirement\":{\"level\":\"300\",\"name\":\"Données saisies par utilisateur connecté\",\"description\":\"On a un compte associé\"},\"attributeRight\":{\"searchable\":true,\"readable\":true,\"writable\":true},\"attributeCertifications\":[{\"code\":\"mon_paris\",\"label\":\"Mon Paris\",\"level\":\"300\"},{\"code\":\"pj\",\"label\":\"Certifiable PJ\",\"level\":\"400\"},{\"code\":\"agent\",\"label\":\"Certifiable Agent pièce originale\",\"level\":\"500\"},{\"code\":\"r2p\",\"label\":\"Certifiable R2P\",\"level\":\"700\"},{\"code\":\"fc\",\"label\":\"Certfiable France Connect\",\"level\":\"700\"}],\"certifiable\":false,\"pivot\":false,\"keyWeight\":0,\"keyName\":\"first_name\",\"description\":\"Prénoms usuels\",\"type\":\"STRING\",\"name\":\"Prénoms\"},{\"attributeRequirement\":null,\"attributeRight\":{\"searchable\":true,\"readable\":true,\"writable\":true},\"attributeCertifications\":[{\"code\":\"mon_paris\",\"label\":\"Mon Paris\",\"level\":\"300\"},{\"code\":\"pj\",\"label\":\"Certifiable PJ\",\"level\":\"400\"},{\"code\":\"agent\",\"label\":\"Certifiable Agent pièce originale\",\"level\":\"500\"},{\"code\":\"r2p\",\"label\":\"Certifiable R2P\",\"level\":\"700\"},{\"code\":\"fc\",\"label\":\"Certfiable France Connect\",\"level\":\"700\"}],\"certifiable\":false,\"pivot\":false,\"keyWeight\":0,\"keyName\":\"birthdate\",\"description\":\"au format DD/MM/YYYY\",\"type\":\"STRING\",\"name\":\"Date de naissance\"},{\"attributeRequirement\":null,\"attributeRight\":{\"searchable\":true,\"readable\":true,\"writable\":true},\"attributeCertifications\":[{\"code\":\"pj\",\"label\":\"Certifiable PJ\",\"level\":\"400\"},{\"code\":\"agent\",\"label\":\"Certifiable Agent pièce originale\",\"level\":\"500\"},{\"code\":\"r2p\",\"label\":\"Certifiable R2P\",\"level\":\"700\"},{\"code\":\"fc\",\"label\":\"Certfiable France Connect\",\"level\":\"700\"}],\"certifiable\":false,\"pivot\":false,\"keyWeight\":0,\"keyName\":\"birthplace_code\",\"description\":\"\",\"type\":\"STRING\",\"name\":\"Code INSEE commune de naissance\"},{\"attributeRequirement\":null,\"attributeRight\":{\"searchable\":true,\"readable\":true,\"writable\":true},\"attributeCertifications\":[{\"code\":\"pj\",\"label\":\"Certifiable PJ\",\"level\":\"400\"},{\"code\":\"agent\",\"label\":\"Certifiable Agent pièce originale\",\"level\":\"500\"},{\"code\":\"r2p\",\"label\":\"Certifiable R2P\",\"level\":\"700\"},{\"code\":\"fc\",\"label\":\"Certfiable France Connect\",\"level\":\"700\"}],\"certifiable\":false,\"pivot\":false,\"keyWeight\":0,\"keyName\":\"birthcountry_code\",\"description\":\"\",\"type\":\"STRING\",\"name\":\"Code INSEE pays de naissance\"},{\"attributeRequirement\":null,\"attributeRight\":{\"searchable\":true,\"readable\":true,\"writable\":true},\"attributeCertifications\":[{\"code\":\"pj\",\"label\":\"Certifiable PJ\",\"level\":\"400\"},{\"code\":\"agent\",\"label\":\"Certifiable Agent pièce originale\",\"level\":\"500\"},{\"code\":\"r2p\",\"label\":\"Certifiable R2P\",\"level\":\"700\"},{\"code\":\"fc\",\"label\":\"Certfiable France Connect\",\"level\":\"700\"}],\"certifiable\":false,\"pivot\":false,\"keyWeight\":0,\"keyName\":\"birthplace\",\"description\":\"\",\"type\":\"STRING\",\"name\":\"Libellé INSEE commune de naissance\"},{\"attributeRequirement\":null,\"attributeRight\":{\"searchable\":true,\"readable\":true,\"writable\":true},\"attributeCertifications\":[{\"code\":\"pj\",\"label\":\"Certifiable PJ\",\"level\":\"400\"},{\"code\":\"agent\",\"label\":\"Certifiable Agent pièce originale\",\"level\":\"500\"},{\"code\":\"r2p\",\"label\":\"Certifiable R2P\",\"level\":\"700\"},{\"code\":\"fc\",\"label\":\"Certfiable France Connect\",\"level\":\"700\"}],\"certifiable\":false,\"pivot\":false,\"keyWeight\":0,\"keyName\":\"birthcountry\",\"description\":\"\",\"type\":\"STRING\",\"name\":\"Libellé INSEE pays de naissance\"},{\"attributeRequirement\":null,\"attributeRight\":{\"searchable\":true,\"readable\":true,\"writable\":true},\"attributeCertifications\":[{\"code\":\"mon_paris\",\"label\":\"Mon Paris\",\"level\":\"300\"},{\"code\":\"mail\",\"label\":\"Certifiable Mail\",\"level\":\"600\"},{\"code\":\"fc\",\"label\":\"Certfiable France Connect\",\"level\":\"600\"}],\"certifiable\":false,\"pivot\":false,\"keyWeight\":0,\"keyName\":\"email\",\"description\":\"\",\"type\":\"STRING\",\"name\":\"Email\"},{\"attributeRequirement\":null,\"attributeRight\":{\"searchable\":true,\"readable\":true,\"writable\":true},\"attributeCertifications\":[{\"code\":\"mail\",\"label\":\"Certifiable Mail\",\"level\":\"600\"}],\"certifiable\":false,\"pivot\":false,\"keyWeight\":0,\"keyName\":\"login\",\"description\":\"\",\"type\":\"STRING\",\"name\":\"Login de connexion (email utilisé, 0)\"},{\"attributeRequirement\":null,\"attributeRight\":{\"searchable\":true,\"readable\":true,\"writable\":true},\"attributeCertifications\":[{\"code\":\"mon_paris\",\"label\":\"Mon Paris\",\"level\":\"300\"},{\"code\":\"sms\",\"label\":\"Certifiable SMS\",\"level\":\"600\"}],\"certifiable\":false,\"pivot\":false,\"keyWeight\":0,\"keyName\":\"mobile_phone\",\"description\":\"Réservé pour l'envoi de SMS\",\"type\":\"STRING\",\"name\":\"Téléphone portable\"},{\"attributeRequirement\":null,\"attributeRight\":{\"searchable\":true,\"readable\":true,\"writable\":true},\"attributeCertifications\":[],\"certifiable\":false,\"pivot\":false,\"keyWeight\":0,\"keyName\":\"fixed_phone\",\"description\":\"\",\"type\":\"STRING\",\"name\":\"Téléphone fixe\"},{\"attributeRequirement\":null,\"attributeRight\":{\"searchable\":true,\"readable\":true,\"writable\":true},\"attributeCertifications\":[{\"code\":\"mon_paris\",\"label\":\"Mon Paris\",\"level\":\"300\"},{\"code\":\"pj\",\"label\":\"Certifiable PJ\",\"level\":\"400\"},{\"code\":\"agent\",\"label\":\"Certifiable Agent pièce originale\",\"level\":\"500\"},{\"code\":\"courrier\",\"label\":\"Certifiable Courrier\",\"level\":\"600\"}],\"certifiable\":false,\"pivot\":false,\"keyWeight\":0,\"keyName\":\"address\",\"description\":\"\",\"type\":\"STRING\",\"name\":\"Adresse\"},{\"attributeRequirement\":null,\"attributeRight\":{\"searchable\":true,\"readable\":true,\"writable\":true},\"attributeCertifications\":[{\"code\":\"mon_paris\",\"label\":\"Mon Paris\",\"level\":\"300\"},{\"code\":\"pj\",\"label\":\"Certifiable PJ\",\"level\":\"400\"},{\"code\":\"agent\",\"label\":\"Certifiable Agent pièce originale\",\"level\":\"500\"},{\"code\":\"courrier\",\"label\":\"Certifiable Courrier\",\"level\":\"600\"}],\"certifiable\":false,\"pivot\":false,\"keyWeight\":0,\"keyName\":\"address_postal_code\",\"description\":\"Champ d'adresse : code postal\",\"type\":\"STRING\",\"name\":\"Code postal\"},{\"attributeRequirement\":null,\"attributeRight\":{\"searchable\":true,\"readable\":true,\"writable\":true},\"attributeCertifications\":[{\"code\":\"mon_paris\",\"label\":\"Mon Paris\",\"level\":\"300\"},{\"code\":\"pj\",\"label\":\"Certifiable PJ\",\"level\":\"400\"},{\"code\":\"agent\",\"label\":\"Certifiable Agent pièce originale\",\"level\":\"500\"},{\"code\":\"courrier\",\"label\":\"Certifiable Courrier\",\"level\":\"600\"}],\"certifiable\":false,\"pivot\":false,\"keyWeight\":0,\"keyName\":\"address_city\",\"description\":\"Champ d'adresse : ville\",\"type\":\"STRING\",\"name\":\"Ville\"},{\"attributeRequirement\":null,\"attributeRight\":{\"searchable\":true,\"readable\":true,\"writable\":true},\"attributeCertifications\":[{\"code\":\"pj\",\"label\":\"Certifiable PJ\",\"level\":\"400\"},{\"code\":\"agent\",\"label\":\"Certifiable Agent pièce originale\",\"level\":\"500\"},{\"code\":\"fc\",\"label\":\"Certfiable France Connect\",\"level\":\"700\"}],\"certifiable\":false,\"pivot\":false,\"keyWeight\":0,\"keyName\":\"fc_key\",\"description\":\"Format Pivot FranceConnect - Key\",\"type\":\"STRING\",\"name\":\"(FC, 0) Key\"},{\"attributeRequirement\":null,\"attributeRight\":{\"searchable\":true,\"readable\":true,\"writable\":true},\"attributeCertifications\":[{\"code\":\"mon_paris\",\"label\":\"Mon Paris\",\"level\":\"300\"},{\"code\":\"pj\",\"label\":\"Certifiable PJ\",\"level\":\"400\"},{\"code\":\"agent\",\"label\":\"Certifiable Agent pièce originale\",\"level\":\"500\"},{\"code\":\"courrier\",\"label\":\"Certifiable Courrier\",\"level\":\"600\"}],\"certifiable\":false,\"pivot\":false,\"keyWeight\":0,\"keyName\":\"address_detail\",\"description\":\"\",\"type\":\"STRING\",\"name\":\"Complément d'adresse\"}],\"isAuthorizedDeleteCertificate\":false,\"isAuthorizedDeleteValue\":false,\"authorizedMerge\":true,\"authorizedAccountUpdate\":true,\"authorizedDeletion\":true,\"authorizedImport\":true,\"authorizedExport\":true,\"organizationalEntity\":\"Mairie de Paris\",\"responsibleName\":\"Sébastien Leridon\",\"endingDate\":null,\"contactName\":\"Sébastien Leclerc\",\"serviceType\":\"FO Lutèce\",\"startingDate\":1677448800000,\"name\":\"Contract de service pour l'application de test\"}",
-                        ServiceContractDto.class );
+                _serviceContract = _serviceContractService.getActiveServiceContract(clientCode).getServiceContract();
+                sortServiceContractAttributes(_serviceContract);
             }
             catch( final Exception e )
             {
                 AppLogService.error( "Error while retrieving service contract [client code = " + clientCode + "].", e );
                 addError( MESSAGE_GET_SERVICE_CONTRACT_ERROR, getLocale( ) );
             }
+        }
+    }
+
+    private void sortServiceContractAttributes( final ServiceContractDto contract )
+    {
+        if ( contract != null )
+        {
+            contract.getAttributeDefinitions( ).sort( ( a1, a2 ) -> {
+                final int index1 = _sortedAttributeKeyList.indexOf( a1.getKeyName( ) );
+                final int index2 = _sortedAttributeKeyList.indexOf( a2.getKeyName( ) );
+                final Integer i1 = index1 == -1 ? 999 : index1;
+                final Integer i2 = index2 == -1 ? 999 : index2;
+                return i1.compareTo( i2 );
+            } );
         }
     }
 

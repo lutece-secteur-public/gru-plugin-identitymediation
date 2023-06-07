@@ -34,10 +34,8 @@
 package fr.paris.lutece.plugins.identitymediation.cache;
 
 import fr.paris.lutece.plugins.identitystore.v3.web.rs.dto.contract.ServiceContractDto;
-import fr.paris.lutece.plugins.identitystore.v3.web.service.IdentityService;
 import fr.paris.lutece.plugins.identitystore.web.exception.IdentityStoreException;
 import fr.paris.lutece.portal.service.cache.AbstractCacheableService;
-import fr.paris.lutece.portal.service.spring.SpringContextService;
 import fr.paris.lutece.portal.service.util.AppPropertiesService;
 import org.apache.log4j.Logger;
 
@@ -49,7 +47,8 @@ public class ServiceContractCache extends AbstractCacheableService
     private static final Logger LOGGER = Logger.getLogger( ServiceContractCache.class );
     private static final String SERVICE_NAME = "ServiceContractCache";
 
-    // private final IdentityService _identityService = SpringContextService.getBean( "identityService.rest.httpAccess" );
+//     private final ServiceContractService
+//             _serviceContractService = SpringContextService.getBean("serviceContract.rest.httpAccess");
     private final List<String> _sortedAttributeKeyList = Arrays.asList( AppPropertiesService.getProperty( "identitymediation.attribute.order" ).split( "," ) );
 
     public ServiceContractCache( )
@@ -91,7 +90,7 @@ public class ServiceContractCache extends AbstractCacheableService
     public ServiceContractDto getFromAPI( final String clientCode ) throws IdentityStoreException
     {
         final ServiceContractDto contract = null;
-        // _identityService.getServiceContract( clientCode ).getServiceContract( );
+//        _serviceContractService.getServiceContractList(clientCode).getServiceContracts().get(0);
         sortServiceContractAttributes( contract );
         return contract;
     }

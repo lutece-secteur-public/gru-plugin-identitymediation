@@ -30,9 +30,9 @@
                 <#list duplicate_rule_list as rule>
                     <tr class="rule-tr">
                         <td><input type="radio" name="rule-id" value="${rule.id}"></td>
-                        <td>${rule.label}</td>
+                        <td>${rule.name}</td>
                         <td>${rule.description}</td>
-                        <td>${rule.pendingDuplicates}</td>
+                        <td>${rule.duplicateCount}</td>
                     </tr>
                 </#list>
             </@table>
