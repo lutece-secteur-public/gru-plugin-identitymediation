@@ -119,11 +119,11 @@ public class IdentityDuplicateJspBean extends MVCAdminJspBean
 
     // Beans
     private static final ServiceContractCache _serviceContractCache = SpringContextService.getBean( "identitymediation.serviceContractCache" );
-    private static final IdentityQualityService _serviceQuality = SpringContextService.getBean("identityQualityService.rest.httpAccess");
-    private static final ServiceContractService _serviceContractService = SpringContextService.getBean("serviceContract.rest.httpAccess");
+    private static final IdentityQualityService _serviceQuality = SpringContextService.getBean( "identityQualityService.rest.httpAccess" );
+    private static final ServiceContractService _serviceContractService = SpringContextService.getBean( "serviceContract.rest.httpAccess" );
 
     // Properties
-    private final List<String> _sortedAttributeKeyList = Arrays.asList(AppPropertiesService.getProperty("identitymediation.attribute.order").split(","));
+    private final List<String> _sortedAttributeKeyList = Arrays.asList( AppPropertiesService.getProperty( "identitymediation.attribute.order" ).split( "," ) );
 
     // Session variable to store working values
     private ServiceContractDto _serviceContract;
@@ -160,20 +160,23 @@ public class IdentityDuplicateJspBean extends MVCAdminJspBean
         return getPage( PROPERTY_PAGE_TITLE_CHOOSE_DUPLICATE_TYPE, TEMPLATE_CHOOSE_DUPLICATE_TYPE, model );
     }
 
-    private List<DuplicateRuleSummaryDto> fetchDuplicateRules() throws IdentityStoreException {
-        final DuplicateRuleSummarySearchResponse response = _serviceQuality.getAllDuplicateRules(_currentClientCode);
-        if (response == null) {
-            throw new IdentityStoreException("DuplicateRuleSummarySearchResponse is null.");
+    private List<DuplicateRuleSummaryDto> fetchDuplicateRules( ) throws IdentityStoreException
+    {
+        final DuplicateRuleSummarySearchResponse response = _serviceQuality.getAllDuplicateRules( _currentClientCode );
+        if ( response == null )
+        {
+            throw new IdentityStoreException( "DuplicateRuleSummarySearchResponse is null." );
         }
-        if (response.getStatus() == DuplicateRuleSummarySearchStatusType.FAILURE) {
-            throw new IdentityStoreException("Status of DuplicateRuleSummarySearchResponse is FAILURE. Message = " +
-                                             response.getStatus().getMessage());
+        if ( response.getStatus( ) == DuplicateRuleSummarySearchStatusType.FAILURE )
+        {
+            throw new IdentityStoreException( "Status of DuplicateRuleSummarySearchResponse is FAILURE. Message = " + response.getStatus( ).getMessage( ) );
         }
-        if (response.getStatus() == DuplicateRuleSummarySearchStatusType.NOT_FOUND || CollectionUtils.isEmpty(response.getDuplicateRuleSummaries())) {
-            AppLogService.error("No duplicate rules found.");
-            addError(MESSAGE_FETCH_DUPLICATE_RULES_NORESULT, getLocale());
+        if ( response.getStatus( ) == DuplicateRuleSummarySearchStatusType.NOT_FOUND || CollectionUtils.isEmpty( response.getDuplicateRuleSummaries( ) ) )
+        {
+            AppLogService.error( "No duplicate rules found." );
+            addError( MESSAGE_FETCH_DUPLICATE_RULES_NORESULT, getLocale( ) );
         }
-        return response.getDuplicateRuleSummaries();
+        return response.getDuplicateRuleSummaries( );
     }
 
     /**
@@ -642,8 +645,8 @@ public class IdentityDuplicateJspBean extends MVCAdminJspBean
         {
             try
             {
-                _serviceContract = _serviceContractService.getActiveServiceContract(clientCode).getServiceContract();
-                sortServiceContractAttributes(_serviceContract);
+                _serviceContract = _serviceContractService.getActiveServiceContract( clientCode ).getServiceContract( );
+                sortServiceContractAttributes( _serviceContract );
             }
             catch( final Exception e )
             {

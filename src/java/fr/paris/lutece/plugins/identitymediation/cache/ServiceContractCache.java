@@ -47,8 +47,8 @@ public class ServiceContractCache extends AbstractCacheableService
     private static final Logger LOGGER = Logger.getLogger( ServiceContractCache.class );
     private static final String SERVICE_NAME = "ServiceContractCache";
 
-//     private final ServiceContractService
-//             _serviceContractService = SpringContextService.getBean("serviceContract.rest.httpAccess");
+    // private final ServiceContractService
+    // _serviceContractService = SpringContextService.getBean("serviceContract.rest.httpAccess");
     private final List<String> _sortedAttributeKeyList = Arrays.asList( AppPropertiesService.getProperty( "identitymediation.attribute.order" ).split( "," ) );
 
     public ServiceContractCache( )
@@ -90,7 +90,7 @@ public class ServiceContractCache extends AbstractCacheableService
     public ServiceContractDto getFromAPI( final String clientCode ) throws IdentityStoreException
     {
         final ServiceContractDto contract = null;
-//        _serviceContractService.getServiceContractList(clientCode).getServiceContracts().get(0);
+        // _serviceContractService.getServiceContractList(clientCode).getServiceContracts().get(0);
         sortServiceContractAttributes( contract );
         return contract;
     }
