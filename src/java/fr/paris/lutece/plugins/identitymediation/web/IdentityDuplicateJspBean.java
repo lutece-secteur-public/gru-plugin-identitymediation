@@ -42,10 +42,15 @@ import fr.paris.lutece.plugins.identitystore.v3.web.rs.dto.contract.ServiceContr
 import fr.paris.lutece.plugins.identitystore.v3.web.rs.dto.crud.CertifiedAttribute;
 import fr.paris.lutece.plugins.identitystore.v3.web.rs.dto.crud.Identity;
 import fr.paris.lutece.plugins.identitystore.v3.web.rs.dto.crud.IdentityChangeRequest;
+import fr.paris.lutece.plugins.identitystore.v3.web.rs.dto.crud.SuspiciousIdentityDto;
+import fr.paris.lutece.plugins.identitystore.v3.web.rs.dto.crud.SuspiciousIdentitySearchResponse;
+import fr.paris.lutece.plugins.identitystore.v3.web.rs.dto.crud.SuspiciousIdentitySearchStatusType;
 import fr.paris.lutece.plugins.identitystore.v3.web.rs.dto.duplicate.DuplicateRuleSummaryDto;
 import fr.paris.lutece.plugins.identitystore.v3.web.rs.dto.duplicate.DuplicateRuleSummarySearchResponse;
 import fr.paris.lutece.plugins.identitystore.v3.web.rs.dto.duplicate.DuplicateRuleSummarySearchStatusType;
+import fr.paris.lutece.plugins.identitystore.v3.web.rs.dto.search.IdentitySearchResponse;
 import fr.paris.lutece.plugins.identitystore.v3.web.rs.dto.search.QualifiedIdentity;
+import fr.paris.lutece.plugins.identitystore.v3.web.service.IdentityService;
 import fr.paris.lutece.plugins.identitystore.v3.web.service.ServiceContractService;
 import fr.paris.lutece.plugins.identitystore.web.exception.IdentityStoreException;
 import fr.paris.lutece.portal.service.spring.SpringContextService;
@@ -121,6 +126,7 @@ public class IdentityDuplicateJspBean extends MVCAdminJspBean
     private static final ServiceContractCache _serviceContractCache = SpringContextService.getBean( "identitymediation.serviceContractCache" );
     private static final IdentityQualityService _serviceQuality = SpringContextService.getBean( "identityQualityService.rest.httpAccess" );
     private static final ServiceContractService _serviceContractService = SpringContextService.getBean( "serviceContract.rest.httpAccess" );
+    private static final IdentityService _serviceIdentity = SpringContextService.getBean( "identityService.rest.httpAccess" );
 
     // Properties
     private final List<String> _sortedAttributeKeyList = Arrays.asList( AppPropertiesService.getProperty( "identitymediation.attribute.order" ).split( "," ) );
@@ -180,45 +186,6 @@ public class IdentityDuplicateJspBean extends MVCAdminJspBean
     }
 
     /**
-     * FIXME MOCK CLASS, TO DELETE WHEN NOT USED
-     */
-    public static class DuplicateRules
-    {
-        private final String id;
-        private final String label;
-        private final String description;
-        private final Integer pendingDuplicates;
-
-        public DuplicateRules( String id, String label, String description, Integer pendingDuplicates )
-        {
-            this.id = id;
-            this.label = label;
-            this.description = description;
-            this.pendingDuplicates = pendingDuplicates;
-        }
-
-        public String getId( )
-        {
-            return id;
-        }
-
-        public String getLabel( )
-        {
-            return label;
-        }
-
-        public String getDescription( )
-        {
-            return description;
-        }
-
-        public Integer getPendingDuplicates( )
-        {
-            return pendingDuplicates;
-        }
-    }
-
-    /**
      * Process the data to send the search request and returns the duplicates search form and results
      *
      * @param request
@@ -260,25 +227,21 @@ public class IdentityDuplicateJspBean extends MVCAdminJspBean
      */
     private List<QualifiedIdentity> fetchPotentialDuplicateHolders( final String ruleId ) throws IdentityStoreException
     {
-        // FIXME mock for the time being.
-        try
+        final List<QualifiedIdentity> identities = new ArrayList<>( );
+        final SuspiciousIdentitySearchResponse response = _serviceQuality.getSuspiciousIdentites( Integer.parseInt( ruleId ), 30, null, null );
+        if ( response != null && response.getStatus( ) != SuspiciousIdentitySearchStatusType.FAILURE )
         {
-            final ArrayList<QualifiedIdentity> list = new ArrayList<>( );
-            final ObjectMapper mapper = new ObjectMapper( );
-
-            list.add( mapper.readValue(
-                    "{\"scoring\":1,\"quality\":82,\"coverage\":66,\"connection_id\":\"mock-connection-id-2\",\"customer_id\":\"mock-cuid-2\",\"attributes\":[{\"key\":\"birthdate\",\"value\":\"22/11/1940\",\"type\":\"string\",\"certificationLevel\":300,\"certifier\":\"mail\",\"certificationDate\":\"2023-05-03\"},{\"key\":\"family_name\",\"value\":\"Durand\",\"type\":\"string\",\"certificationLevel\":700,\"certifier\":\"r2p\",\"certificationDate\":\"2023-05-03\"},{\"key\":\"first_name\",\"value\":\"Gilles\",\"type\":\"string\",\"certificationLevel\":600,\"certifier\":\"agent\",\"certificationDate\":\"2023-05-03\"}]}",
-                    QualifiedIdentity.class ) );
-            list.add( mapper.readValue(
-                    "{\"scoring\":1,\"quality\":80,\"coverage\":80,\"connection_id\":\"mock-connection-id\",\"customer_id\":\"mock-cuid\",\"attributes\":[{\"key\":\"birthdate\",\"value\":\"01/01/1990\",\"type\":\"string\",\"certificationLevel\":400,\"certifier\":\"pj\",\"certificationDate\":\"2023-05-02\"},{\"key\":\"family_name\",\"value\":\"Dupont\",\"type\":\"string\",\"certificationLevel\":700,\"certifier\":\"fc\",\"certificationDate\":\"2023-05-02\"},{\"key\":\"first_name\",\"value\":\"Jean\",\"type\":\"string\",\"certificationLevel\":700,\"certifier\":\"fc\",\"certificationDate\":\"2023-05-02\"}]}",
-                    QualifiedIdentity.class ) );
-
-            return list;
+            for ( final SuspiciousIdentityDto suspiciousIdentity : response.getSuspiciousIdentities( ) )
+            {
+                final IdentitySearchResponse identityResponse = _serviceIdentity.getIdentityByCustomerId( suspiciousIdentity.getCustomerId( ),
+                        _currentClientCode );
+                if ( identityResponse != null && identityResponse.getIdentities( ) != null && identityResponse.getIdentities( ).size( ) == 1 )
+                {
+                    identities.addAll( identityResponse.getIdentities( ) );
+                }
+            }
         }
-        catch( final Exception e )
-        {
-            throw new IdentityStoreException( "error", e );
-        }
+        return identities;
     }
 
     /**

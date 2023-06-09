@@ -17,6 +17,11 @@
             <value>${identitymediation.identityquality.endpoint}</value>
         </property>
     </bean>
+    <bean id="restTransport.identity.httpAccess" class="fr.paris.lutece.plugins.identitystore.v3.web.rs.service.IdentityTransportRest">
+        <property name="IdentityStoreEndPoint">
+            <value>${identitymediation.identityquality.endpoint}</value>
+        </property>
+    </bean>
 
     <!-- QualityService impl -->
     <bean id="identityQualityService.rest.httpAccess" class="fr.paris.lutece.plugins.identityquality.v3.web.service.IdentityQualityService">
@@ -26,6 +31,11 @@
     <bean id="serviceContract.rest.httpAccess" class="fr.paris.lutece.plugins.identitystore.v3.web.service.ServiceContractService">
         <constructor-arg ref="restTransport.serviceContract.httpAccess"/>
     </bean>
+    <!-- IdentityService impl -->
+    <bean id="identityService.rest.httpAccess" class="fr.paris.lutece.plugins.identitystore.v3.web.service.IdentityService">
+        <constructor-arg ref="restTransport.identity.httpAccess"/>
+    </bean>
+
 
     <!-- Cache -->
     <bean id="identitymediation.serviceContractCache"  class="fr.paris.lutece.plugins.identitymediation.cache.ServiceContractCache"/>
