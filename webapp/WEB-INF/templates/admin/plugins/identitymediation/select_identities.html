@@ -47,9 +47,9 @@
                             <th class="fw-normal">
                                 <div class="col-12">#i18n{identitymediation.select_identities.identity} ${count}</div>
                                 <div class="col-12"><span class="quality-span">${identity.quality}</span> %</div>
-                                <#list identity.attributes?filter(a -> a.key == 'login') as attr>
+                                <#if identity.monParisActive >
                                     <span class="badge">MON PARIS</span>
-                                </#list>
+                                </#if>
                                 <input type="hidden" name="identity-cuid-${count}" value="${identity.customerId}" disabled >
                             </th>
                             <#assign count = count + 1>
