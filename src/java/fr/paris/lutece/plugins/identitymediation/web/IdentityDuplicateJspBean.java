@@ -33,7 +33,6 @@
  */
 package fr.paris.lutece.plugins.identitymediation.web;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import fr.paris.lutece.plugins.identitymediation.cache.ServiceContractCache;
 import fr.paris.lutece.plugins.identityquality.v3.web.service.IdentityQualityService;
 import fr.paris.lutece.plugins.identitystore.v3.web.rs.dto.common.AuthorType;
@@ -48,6 +47,11 @@ import fr.paris.lutece.plugins.identitystore.v3.web.rs.dto.crud.SuspiciousIdenti
 import fr.paris.lutece.plugins.identitystore.v3.web.rs.dto.duplicate.DuplicateRuleSummaryDto;
 import fr.paris.lutece.plugins.identitystore.v3.web.rs.dto.duplicate.DuplicateRuleSummarySearchResponse;
 import fr.paris.lutece.plugins.identitystore.v3.web.rs.dto.duplicate.DuplicateRuleSummarySearchStatusType;
+import fr.paris.lutece.plugins.identitystore.v3.web.rs.dto.merge.Identities;
+import fr.paris.lutece.plugins.identitystore.v3.web.rs.dto.merge.IdentityMergeRequest;
+import fr.paris.lutece.plugins.identitystore.v3.web.rs.dto.merge.IdentityMergeResponse;
+import fr.paris.lutece.plugins.identitystore.v3.web.rs.dto.merge.IdentityMergeStatus;
+import fr.paris.lutece.plugins.identitystore.v3.web.rs.dto.search.DuplicateSearchResponse;
 import fr.paris.lutece.plugins.identitystore.v3.web.rs.dto.search.IdentitySearchResponse;
 import fr.paris.lutece.plugins.identitystore.v3.web.rs.dto.search.QualifiedIdentity;
 import fr.paris.lutece.plugins.identitystore.v3.web.service.IdentityService;
@@ -66,6 +70,7 @@ import org.apache.commons.lang3.StringUtils;
 import javax.servlet.http.HttpServletRequest;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.Comparator;
 import java.util.Date;
 import java.util.List;
@@ -88,6 +93,7 @@ public class IdentityDuplicateJspBean extends MVCAdminJspBean
     private static final String MESSAGE_FETCH_DUPLICATES_ERROR = "identitymediation.message.fetch_duplicates.error";
     private static final String MESSAGE_FETCH_DUPLICATES_NORESULT = "identitymediation.message.fetch_duplicates.noresult";
     private static final String MESSAGE_MERGE_DUPLICATES_SUCCESS = "identitymediation.message.merge_duplicates.success";
+    private static final String MESSAGE_MERGE_DUPLICATES_ERROR = "identitymediation.message.merge_duplicates.error";
     private static final String MESSAGE_EXCLUDE_DUPLICATES_SUCCESS = "identitymediation.message.exclude_duplicates.success";
 
     // Views
@@ -135,6 +141,7 @@ public class IdentityDuplicateJspBean extends MVCAdminJspBean
     // Session variable to store working values
     private ServiceContractDto _serviceContract;
     private String _currentClientCode = AppPropertiesService.getProperty( "identitymediation.default.client.code" );
+    private Integer _currentRuleId;
     private QualifiedIdentity _identityToKeep;
     private QualifiedIdentity _identityToMerge;
 
@@ -196,15 +203,16 @@ public class IdentityDuplicateJspBean extends MVCAdminJspBean
     @View( value = VIEW_SEARCH_DUPLICATES )
     public String getSearchDuplicates( final HttpServletRequest request )
     {
-        final String ruleId = request.getParameter( "rule-id" );
-        if ( StringUtils.isBlank( ruleId ) )
+        final String ruleIdStr = request.getParameter( "rule-id" );
+        if ( StringUtils.isBlank( ruleIdStr ) )
         {
             throw new RuntimeException( "error" ); // TODO
         }
+        _currentRuleId = Integer.parseInt( ruleIdStr );
         final List<QualifiedIdentity> identities = new ArrayList<>( );
         try
         {
-            identities.addAll( fetchPotentialDuplicateHolders( ruleId ) );
+            identities.addAll( fetchPotentialDuplicateHolders( ) );
             if ( CollectionUtils.isEmpty( identities ) )
             {
                 addInfo( MESSAGE_FETCH_DUPLICATE_HOLDERS_NORESULT, getLocale( ) );
@@ -226,20 +234,15 @@ public class IdentityDuplicateJspBean extends MVCAdminJspBean
     /**
      * Fetches identities that are likely to have duplicates.
      */
-    private List<QualifiedIdentity> fetchPotentialDuplicateHolders( final String ruleId ) throws IdentityStoreException
+    private List<QualifiedIdentity> fetchPotentialDuplicateHolders( ) throws IdentityStoreException
     {
         final List<QualifiedIdentity> identities = new ArrayList<>( );
-        final SuspiciousIdentitySearchResponse response = _serviceQuality.getSuspiciousIdentites( Integer.parseInt( ruleId ), 30, null, null );
-        if ( response != null && response.getStatus( ) != SuspiciousIdentitySearchStatusType.FAILURE )
+        final SuspiciousIdentitySearchResponse response = _serviceQuality.getSuspiciousIdentities( _currentRuleId, 30, null, null );
+        if ( response != null && response.getStatus( ) != SuspiciousIdentitySearchStatusType.FAILURE && response.getSuspiciousIdentities( ) != null )
         {
             for ( final SuspiciousIdentityDto suspiciousIdentity : response.getSuspiciousIdentities( ) )
             {
-                final IdentitySearchResponse identityResponse = _serviceIdentity.getIdentityByCustomerId( suspiciousIdentity.getCustomerId( ),
-                        _currentClientCode );
-                if ( identityResponse != null && identityResponse.getIdentities( ) != null && identityResponse.getIdentities( ).size( ) == 1 )
-                {
-                    identities.addAll( identityResponse.getIdentities( ) );
-                }
+                identities.add( getQualifiedIdentityFromCustomerId( suspiciousIdentity.getCustomerId( ) ) );
             }
         }
         return identities;
@@ -374,12 +377,22 @@ public class IdentityDuplicateJspBean extends MVCAdminJspBean
         {
             throw new RuntimeException( "error" ); // TODO
         }
-        final IdentityChangeRequest identityChangeRequest = buildIdentityChangeRequest( request );
-        if ( identityChangeRequest != null )
+        try
         {
-            // TODO send request
+            final IdentityMergeRequest identityMergeRequest = buildMergeRequest( request );
+            final IdentityMergeResponse response = _serviceIdentity.mergeIdentities( identityMergeRequest, _currentClientCode );
+            if ( response.getStatus( ) == IdentityMergeStatus.FAILURE )
+            {
+                addError( MESSAGE_MERGE_DUPLICATES_ERROR, getLocale( ) );
+                _identityToKeep = null;
+                _identityToMerge = null;
+                return getDuplicateTypes( request );
+            }
         }
-        // TODO send merge duplicate request
+        catch( final IdentityStoreException e )
+        {
+            throw new RuntimeException( e ); // TODO
+        }
 
         releaseAcknoledgement( _identityToKeep, _identityToMerge );
         _identityToKeep = null;
@@ -465,17 +478,17 @@ public class IdentityDuplicateJspBean extends MVCAdminJspBean
     }
 
     /**
-     * Init worked identities for resolve duplicate screen. Identity to keep is set with the identity having a login attribute (Mon Paris account), and/or
-     * better quality score.
+     * Init worked identities for resolve duplicate screen. Identity to keep is set with the identity having an active Mon Paris account, and/or better quality
+     * score.
      * 
      * @param identity1
      * @param identity2
      */
     private void setWorkedIdentities( final QualifiedIdentity identity1, final QualifiedIdentity identity2 )
     {
-        if ( identity1.getAttributes( ).stream( ).anyMatch( a -> a.getKey( ).equals( "login" ) ) )
+        if ( identity1.isMonParisActive( ) )
         {
-            if ( identity2.getAttributes( ).stream( ).anyMatch( a -> a.getKey( ).equals( "login" ) ) )
+            if ( identity2.isMonParisActive( ) )
             {
                 if ( identity1.getQuality( ) >= identity2.getQuality( ) )
                 {
@@ -496,7 +509,7 @@ public class IdentityDuplicateJspBean extends MVCAdminJspBean
         }
         else
         {
-            if ( identity2.getAttributes( ).stream( ).anyMatch( a -> a.getKey( ).equals( "login" ) ) )
+            if ( identity2.isMonParisActive( ) )
             {
                 _identityToKeep = identity2;
                 _identityToMerge = identity1;
@@ -526,27 +539,15 @@ public class IdentityDuplicateJspBean extends MVCAdminJspBean
      */
     private QualifiedIdentity getQualifiedIdentityFromCustomerId( final String customerId ) throws IdentityStoreException
     {
-        if ( StringUtils.isBlank( customerId ) )
+        if ( StringUtils.isNotBlank( customerId ) )
         {
-            return null;
-        }
-        // FIXME mock for now
-        try
-        {
-            QualifiedIdentity res = _mockPotentialDuplicateList.stream( ).filter( i -> i.getCustomerId( ).equals( customerId ) ).findFirst( ).orElse( null );
-            if ( res == null )
+            final IdentitySearchResponse identityResponse = _serviceIdentity.getIdentityByCustomerId( customerId, _currentClientCode );
+            if ( identityResponse != null && identityResponse.getIdentities( ) != null && identityResponse.getIdentities( ).size( ) == 1 )
             {
-                return new ObjectMapper( ).readValue(
-                        "{\"scoring\":1,\"quality\":82,\"coverage\":66,\"connection_id\":\"mock-connection-id-2\",\"customer_id\":\"" + customerId
-                                + "\",\"attributes\":[{\"key\":\"birthdate\",\"value\":\"22/11/1940\",\"type\":\"string\",\"certificationLevel\":300,\"certifier\":\"mail\",\"certificationDate\":\"2023-05-03\"},{\"key\":\"family_name\",\"value\":\"Durand\",\"type\":\"string\",\"certificationLevel\":700,\"certifier\":\"r2p\",\"certificationDate\":\"2023-05-03\"},{\"key\":\"first_name\",\"value\":\"Gilles\",\"type\":\"string\",\"certificationLevel\":600,\"certifier\":\"agent\",\"certificationDate\":\"2023-05-03\"},{\"key\":\"mobile_phone\",\"value\":\"06.66.32.89.01\",\"type\":\"string\",\"certificationLevel\":600,\"certifier\":\"sms\",\"certificationDate\":\"2023-05-03\"},{\"key\":\"preferred_username\",\"value\":\"Dupont\",\"type\":\"string\",\"certificationLevel\":700,\"certifier\":\"fc\",\"certificationDate\":\"2023-05-05\"},{\"key\":\"login\",\"value\":\"login@monparis.fr\",\"type\":\"string\",\"certificationLevel\":400,\"certifier\":\"mail\",\"certificationDate\":\"2023-05-13\"}],\"mon_paris_active\":true}",
-                        QualifiedIdentity.class );
+                return identityResponse.getIdentities( ).get( 0 );
             }
-            return res;
         }
-        catch( final Exception e )
-        {
-            throw new IdentityStoreException( "error", e );
-        }
+        return null;
     }
 
     private final List<QualifiedIdentity> _mockPotentialDuplicateList = new ArrayList<>( );
@@ -559,28 +560,36 @@ public class IdentityDuplicateJspBean extends MVCAdminJspBean
      */
     private List<QualifiedIdentity> fetchPotentialDuplicates( final QualifiedIdentity identity ) throws IdentityStoreException
     {
-        // FIXME mock for now
-        _mockPotentialDuplicateList.clear( );
-        try
+        final DuplicateSearchResponse response = _serviceQuality.getDuplicates( identity.getCustomerId( ), _currentRuleId, _currentClientCode, 30, null, null );
+        if ( response != null && response.getIdentities( ) != null && !response.getIdentities( ).isEmpty( ) )
         {
-            final ObjectMapper mapper = new ObjectMapper( );
-
-            _mockPotentialDuplicateList.add( mapper.readValue(
-                    "{\"scoring\":1,\"quality\":77,\"coverage\":66,\"connection_id\":\"mock-connection-id-3\",\"customer_id\":\"mock-cuid-3\",\"attributes\":[{\"key\":\"birthdate\",\"value\":\"22/11/1940\",\"type\":\"string\",\"certificationLevel\":300,\"certifier\":\"mail\",\"certificationDate\":\"2023-05-03\"},{\"key\":\"family_name\",\"value\":\"Durand\",\"type\":\"string\",\"certificationLevel\":700,\"certifier\":\"r2p\",\"certificationDate\":\"2023-05-03\"},{\"key\":\"first_name\",\"value\":\"Gille\",\"type\":\"string\",\"certificationLevel\":600,\"certifier\":\"agent\",\"certificationDate\":\"2023-05-03\"},{\"key\":\"mobile_phone\",\"value\":\"06.66.32.89.01\",\"type\":\"string\",\"certificationLevel\":600,\"certifier\":\"sms\",\"certificationDate\":\"2023-05-03\"}],\"mon_paris_active\":false}",
-                    QualifiedIdentity.class ) );
-            _mockPotentialDuplicateList.add( mapper.readValue(
-                    "{\"scoring\":1,\"quality\":79,\"coverage\":66,\"connection_id\":\"mock-connection-id-4\",\"customer_id\":\"mock-cuid-4\",\"attributes\":[{\"key\":\"birthdate\",\"value\":\"22/11/1940\",\"type\":\"string\",\"certificationLevel\":300,\"certifier\":\"mail\",\"certificationDate\":\"2023-05-03\"},{\"key\":\"family_name\",\"value\":\"Durant\",\"type\":\"string\",\"certificationLevel\":700,\"certifier\":\"r2p\",\"certificationDate\":\"2023-05-03\"},{\"key\":\"first_name\",\"value\":\"Gilles\",\"type\":\"string\",\"certificationLevel\":500,\"certifier\":\"agent\",\"certificationDate\":\"2023-05-03\"},{\"key\":\"mobile_phone\",\"value\":\"06.12.23.34.45\",\"type\":\"string\",\"certificationLevel\":600,\"certifier\":\"sms\",\"certificationDate\":\"2023-05-03\"},{\"key\":\"login\",\"value\":\"login@monparis.fr\",\"type\":\"string\",\"certificationLevel\":400,\"certifier\":\"mail\",\"certificationDate\":\"2023-05-13\"}],\"mon_paris_active\":true}",
-                    QualifiedIdentity.class ) );
-            _mockPotentialDuplicateList.add( mapper.readValue(
-                    "{\"scoring\":1,\"quality\":81,\"coverage\":66,\"connection_id\":\"mock-connection-id-5\",\"customer_id\":\"mock-cuid-5\",\"attributes\":[{\"key\":\"birthdate\",\"value\":\"22/11/1940\",\"type\":\"string\",\"certificationLevel\":300,\"certifier\":\"mail\",\"certificationDate\":\"2023-05-03\"},{\"key\":\"family_name\",\"value\":\"Durant\",\"type\":\"string\",\"certificationLevel\":700,\"certifier\":\"r2p\",\"certificationDate\":\"2023-05-03\"},{\"key\":\"first_name\",\"value\":\"Gilles\",\"type\":\"string\",\"certificationLevel\":500,\"certifier\":\"agent\",\"certificationDate\":\"2023-05-03\"},{\"key\":\"mobile_phone\",\"value\":\"06.31.55.63.28\",\"type\":\"string\",\"certificationLevel\":600,\"certifier\":\"sms\",\"certificationDate\":\"2023-05-03\"},{\"key\":\"address\",\"value\":\"1 rue du test\",\"type\":\"string\",\"certificationLevel\":600,\"certifier\":\"courrier\",\"certificationDate\":\"2023-06-11\"},{\"key\":\"gender\",\"value\":\"1\",\"type\":\"string\",\"certificationLevel\":500,\"certifier\":\"agent\",\"certificationDate\":\"2023-06-08\"},{\"key\":\"address_city\",\"value\":\"Testville\",\"type\":\"string\",\"certificationLevel\":600,\"certifier\":\"courrier\",\"certificationDate\":\"2023-06-11\"},{\"key\":\"address_postal_code\",\"value\":\"12345\",\"type\":\"string\",\"certificationLevel\":600,\"certifier\":\"courrier\",\"certificationDate\":\"2023-06-11\"},{\"key\":\"email\",\"value\":\"test@test.co\",\"type\":\"string\",\"certificationLevel\":600,\"certifier\":\"mail\",\"certificationDate\":\"2023-06-03\"}],\"mon_paris_active\":false}",
-                    QualifiedIdentity.class ) );
-
-            return _mockPotentialDuplicateList;
+            return response.getIdentities( );
         }
-        catch( Exception e )
-        {
-            throw new IdentityStoreException( "error", e );
-        }
+        return Collections.emptyList( );
+
+        // _mockPotentialDuplicateList.clear( );
+        // try
+        // {
+        // final ObjectMapper mapper = new ObjectMapper( );
+        //
+        // _mockPotentialDuplicateList.add( mapper.readValue(
+        // "{\"scoring\":1,\"quality\":77,\"coverage\":66,\"connection_id\":\"mock-connection-id-3\",\"customer_id\":\"mock-cuid-3\",\"attributes\":[{\"key\":\"birthdate\",\"value\":\"22/11/1940\",\"type\":\"string\",\"certificationLevel\":300,\"certifier\":\"mail\",\"certificationDate\":\"2023-05-03\"},{\"key\":\"family_name\",\"value\":\"Durand\",\"type\":\"string\",\"certificationLevel\":700,\"certifier\":\"r2p\",\"certificationDate\":\"2023-05-03\"},{\"key\":\"first_name\",\"value\":\"Gille\",\"type\":\"string\",\"certificationLevel\":600,\"certifier\":\"agent\",\"certificationDate\":\"2023-05-03\"},{\"key\":\"mobile_phone\",\"value\":\"06.66.32.89.01\",\"type\":\"string\",\"certificationLevel\":600,\"certifier\":\"sms\",\"certificationDate\":\"2023-05-03\"}],\"mon_paris_active\":false}",
+        // QualifiedIdentity.class ) );
+        // _mockPotentialDuplicateList.add( mapper.readValue(
+        // "{\"scoring\":1,\"quality\":79,\"coverage\":66,\"connection_id\":\"mock-connection-id-4\",\"customer_id\":\"mock-cuid-4\",\"attributes\":[{\"key\":\"birthdate\",\"value\":\"22/11/1940\",\"type\":\"string\",\"certificationLevel\":300,\"certifier\":\"mail\",\"certificationDate\":\"2023-05-03\"},{\"key\":\"family_name\",\"value\":\"Durant\",\"type\":\"string\",\"certificationLevel\":700,\"certifier\":\"r2p\",\"certificationDate\":\"2023-05-03\"},{\"key\":\"first_name\",\"value\":\"Gilles\",\"type\":\"string\",\"certificationLevel\":500,\"certifier\":\"agent\",\"certificationDate\":\"2023-05-03\"},{\"key\":\"mobile_phone\",\"value\":\"06.12.23.34.45\",\"type\":\"string\",\"certificationLevel\":600,\"certifier\":\"sms\",\"certificationDate\":\"2023-05-03\"},{\"key\":\"login\",\"value\":\"login@monparis.fr\",\"type\":\"string\",\"certificationLevel\":400,\"certifier\":\"mail\",\"certificationDate\":\"2023-05-13\"}],\"mon_paris_active\":true}",
+        // QualifiedIdentity.class ) );
+        // _mockPotentialDuplicateList.add( mapper.readValue(
+        // "{\"scoring\":1,\"quality\":81,\"coverage\":66,\"connection_id\":\"mock-connection-id-5\",\"customer_id\":\"mock-cuid-5\",\"attributes\":[{\"key\":\"birthdate\",\"value\":\"22/11/1940\",\"type\":\"string\",\"certificationLevel\":300,\"certifier\":\"mail\",\"certificationDate\":\"2023-05-03\"},{\"key\":\"family_name\",\"value\":\"Durant\",\"type\":\"string\",\"certificationLevel\":700,\"certifier\":\"r2p\",\"certificationDate\":\"2023-05-03\"},{\"key\":\"first_name\",\"value\":\"Gilles\",\"type\":\"string\",\"certificationLevel\":500,\"certifier\":\"agent\",\"certificationDate\":\"2023-05-03\"},{\"key\":\"mobile_phone\",\"value\":\"06.31.55.63.28\",\"type\":\"string\",\"certificationLevel\":600,\"certifier\":\"sms\",\"certificationDate\":\"2023-05-03\"},{\"key\":\"address\",\"value\":\"1
+        // rue du
+        // test\",\"type\":\"string\",\"certificationLevel\":600,\"certifier\":\"courrier\",\"certificationDate\":\"2023-06-11\"},{\"key\":\"gender\",\"value\":\"1\",\"type\":\"string\",\"certificationLevel\":500,\"certifier\":\"agent\",\"certificationDate\":\"2023-06-08\"},{\"key\":\"address_city\",\"value\":\"Testville\",\"type\":\"string\",\"certificationLevel\":600,\"certifier\":\"courrier\",\"certificationDate\":\"2023-06-11\"},{\"key\":\"address_postal_code\",\"value\":\"12345\",\"type\":\"string\",\"certificationLevel\":600,\"certifier\":\"courrier\",\"certificationDate\":\"2023-06-11\"},{\"key\":\"email\",\"value\":\"test@test.co\",\"type\":\"string\",\"certificationLevel\":600,\"certifier\":\"mail\",\"certificationDate\":\"2023-06-03\"}],\"mon_paris_active\":false}",
+        // QualifiedIdentity.class ) );
+        //
+        // return _mockPotentialDuplicateList;
+        // }
+        // catch( Exception e )
+        // {
+        // throw new IdentityStoreException( "error", e );
+        // }
     }
 
     /**
@@ -682,6 +691,30 @@ public class IdentityDuplicateJspBean extends MVCAdminJspBean
         changeRequest.setOrigin( author );
 
         return changeRequest;
+    }
+
+    private IdentityMergeRequest buildMergeRequest( final HttpServletRequest request )
+    {
+        final IdentityMergeRequest req = new IdentityMergeRequest( );
+        final Identities identities = new Identities( );
+
+        identities.setPrimaryCuid( _identityToKeep.getCustomerId( ) );
+        identities.setSecondaryCuid( _identityToMerge.getCustomerId( ) );
+        if ( request.getParameterMap( ).entrySet( ).stream( ).anyMatch( entry -> entry.getKey( ).startsWith( "override-" ) ) )
+        {
+            identities.getAttributeKeys( )
+                    .addAll( request.getParameterMap( ).keySet( ).stream( ).filter( key -> key.startsWith( "override-" ) && !key.endsWith( "-certif" ) )
+                            .map( key -> StringUtils.removeStart( key, "override-" ) ).collect( Collectors.toList( ) ) );
+        }
+
+        RequestAuthor author = new RequestAuthor( );
+        author.setName( getUser( ).getEmail( ) );
+        author.setType( AuthorType.application );
+
+        req.setOrigin( author );
+        req.setIdentities( identities );
+
+        return req;
     }
 
 }
