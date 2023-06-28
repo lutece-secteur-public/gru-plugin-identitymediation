@@ -274,7 +274,6 @@ public class IdentityDuplicateJspBean extends MVCAdminJspBean
         }
 
         final List<QualifiedIdentity> identityList = new ArrayList<>( );
-        identityList.add( identity );
         try
         {
             final List<QualifiedIdentity> duplicateList = fetchPotentialDuplicates( identity );
