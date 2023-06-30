@@ -42,6 +42,9 @@ import fr.paris.lutece.plugins.identitystore.v3.web.rs.dto.crud.CertifiedAttribu
 import fr.paris.lutece.plugins.identitystore.v3.web.rs.dto.crud.Identity;
 import fr.paris.lutece.plugins.identitystore.v3.web.rs.dto.crud.IdentityChangeRequest;
 import fr.paris.lutece.plugins.identitystore.v3.web.rs.dto.crud.SuspiciousIdentityDto;
+import fr.paris.lutece.plugins.identitystore.v3.web.rs.dto.crud.SuspiciousIdentityExcludeRequest;
+import fr.paris.lutece.plugins.identitystore.v3.web.rs.dto.crud.SuspiciousIdentityExcludeResponse;
+import fr.paris.lutece.plugins.identitystore.v3.web.rs.dto.crud.SuspiciousIdentityExcludeStatus;
 import fr.paris.lutece.plugins.identitystore.v3.web.rs.dto.crud.SuspiciousIdentitySearchResponse;
 import fr.paris.lutece.plugins.identitystore.v3.web.rs.dto.crud.SuspiciousIdentitySearchStatusType;
 import fr.paris.lutece.plugins.identitystore.v3.web.rs.dto.duplicate.DuplicateRuleSummaryDto;
@@ -84,17 +87,20 @@ import java.util.stream.Collectors;
 public class IdentityDuplicateJspBean extends MVCAdminJspBean
 {
     // Messages
+    private static final String MESSAGE_CHOOSE_DUPLICATE_TYPE_ERROR = "identitymediation.message.choose_duplicate_type.error";
     private static final String MESSAGE_FETCH_DUPLICATE_RULES_ERROR = "identitymediation.message.fetch_duplicate_rules.error";
     private static final String MESSAGE_FETCH_DUPLICATE_RULES_NORESULT = "identitymediation.message.fetch_duplicate_rules.noresult";
     private static final String MESSAGE_FETCH_DUPLICATE_HOLDERS_ERROR = "identitymediation.message.fetch_duplicate_holders.error";
     private static final String MESSAGE_FETCH_DUPLICATE_HOLDERS_NORESULT = "identitymediation.message.fetch_duplicate_holders.noresult";
     private static final String MESSAGE_GET_SERVICE_CONTRACT_ERROR = "identitymediation.message.get_service_contract.error";
     private static final String MESSAGE_GET_IDENTITY_ERROR = "identitymediation.message.get_identity.error";
+    private static final String MESSAGE_SELECT_IDENTITIES_ERROR = "identitymediation.message.select_identities.error";
     private static final String MESSAGE_FETCH_DUPLICATES_ERROR = "identitymediation.message.fetch_duplicates.error";
     private static final String MESSAGE_FETCH_DUPLICATES_NORESULT = "identitymediation.message.fetch_duplicates.noresult";
     private static final String MESSAGE_MERGE_DUPLICATES_SUCCESS = "identitymediation.message.merge_duplicates.success";
     private static final String MESSAGE_MERGE_DUPLICATES_ERROR = "identitymediation.message.merge_duplicates.error";
     private static final String MESSAGE_EXCLUDE_DUPLICATES_SUCCESS = "identitymediation.message.exclude_duplicates.success";
+    private static final String MESSAGE_EXCLUDE_DUPLICATES_ERROR = "identitymediation.message.exclude_duplicates.error";
 
     // Views
     private static final String VIEW_CHOOSE_DUPLICATE_TYPE = "chooseDuplicateType";
@@ -206,7 +212,8 @@ public class IdentityDuplicateJspBean extends MVCAdminJspBean
         final String ruleIdStr = request.getParameter( "rule-id" );
         if ( StringUtils.isBlank( ruleIdStr ) )
         {
-            throw new RuntimeException( "error" ); // TODO
+            addError( MESSAGE_CHOOSE_DUPLICATE_TYPE_ERROR, getLocale( ) );
+            return getDuplicateTypes( request );
         }
         _currentRuleId = Integer.parseInt( ruleIdStr );
         final List<QualifiedIdentity> identities = new ArrayList<>( );
@@ -312,7 +319,8 @@ public class IdentityDuplicateJspBean extends MVCAdminJspBean
                 .map( e -> e.getValue( ) [0] ).collect( Collectors.toList( ) );
         if ( CollectionUtils.isEmpty( cuidList ) || cuidList.size( ) != 2 )
         {
-            throw new RuntimeException( "error" ); // TODO
+            addError( MESSAGE_SELECT_IDENTITIES_ERROR, getLocale( ) );
+            return getDuplicateTypes( request );
         }
         try
         {
@@ -374,7 +382,10 @@ public class IdentityDuplicateJspBean extends MVCAdminJspBean
     {
         if ( _identityToKeep == null || _identityToMerge == null || _identityToMerge.equals( _identityToKeep ) )
         {
-            throw new RuntimeException( "error" ); // TODO
+            addError( MESSAGE_MERGE_DUPLICATES_ERROR, getLocale( ) );
+            _identityToKeep = null;
+            _identityToMerge = null;
+            return getDuplicateTypes( request );
         }
         try
         {
@@ -390,7 +401,11 @@ public class IdentityDuplicateJspBean extends MVCAdminJspBean
         }
         catch( final IdentityStoreException e )
         {
-            throw new RuntimeException( e ); // TODO
+            AppLogService.error( "Error while merging identities", e );
+            addError( MESSAGE_MERGE_DUPLICATES_ERROR, getLocale( ) );
+            _identityToKeep = null;
+            _identityToMerge = null;
+            return getDuplicateTypes( request );
         }
 
         releaseAcknoledgement( _identityToKeep, _identityToMerge );
@@ -412,9 +427,37 @@ public class IdentityDuplicateJspBean extends MVCAdminJspBean
     {
         if ( _identityToKeep == null || _identityToMerge == null || _identityToMerge.equals( _identityToKeep ) )
         {
-            throw new RuntimeException( "error" ); // TODO
+            addError( MESSAGE_EXCLUDE_DUPLICATES_ERROR, getLocale( ) );
+            _identityToKeep = null;
+            _identityToMerge = null;
+            return getDuplicateTypes( request );
         }
-        // TODO send exclude duplicate request
+
+        final SuspiciousIdentityExcludeRequest excludeRequest = new SuspiciousIdentityExcludeRequest( );
+        excludeRequest.setOrigin( buildAuthor( ) );
+        excludeRequest.setIdentityCuid1( _identityToKeep.getCustomerId( ) );
+        excludeRequest.setIdentityCuid2( _identityToMerge.getCustomerId( ) );
+        excludeRequest.setRuleId( _currentRuleId );
+        try
+        {
+            final SuspiciousIdentityExcludeResponse response = _serviceQuality.excludeIdentities( excludeRequest, _currentClientCode );
+            if ( response.getStatus( ) != SuspiciousIdentityExcludeStatus.EXCLUDE_SUCCESS )
+            {
+                addError( MESSAGE_EXCLUDE_DUPLICATES_ERROR, getLocale( ) );
+                AppLogService.error( response.getMessage( ) );
+                _identityToKeep = null;
+                _identityToMerge = null;
+                return getDuplicateTypes( request );
+            }
+        }
+        catch( final IdentityStoreException e )
+        {
+            AppLogService.error( "Error while excluding the identities.", e );
+            addError( MESSAGE_EXCLUDE_DUPLICATES_ERROR, getLocale( ) );
+            _identityToKeep = null;
+            _identityToMerge = null;
+            return getDuplicateTypes( request );
+        }
 
         releaseAcknoledgement( _identityToKeep, _identityToMerge );
         _identityToKeep = null;
@@ -433,11 +476,6 @@ public class IdentityDuplicateJspBean extends MVCAdminJspBean
     @Action( ACTION_CANCEL )
     public String doCancel( final HttpServletRequest request )
     {
-        if ( _identityToKeep == null || _identityToMerge == null )
-        {
-            throw new RuntimeException( "error" ); // TODO
-        }
-
         releaseAcknoledgement( _identityToKeep, _identityToMerge );
         _identityToKeep = null;
         _identityToMerge = null;
@@ -706,14 +744,18 @@ public class IdentityDuplicateJspBean extends MVCAdminJspBean
                             .map( key -> StringUtils.removeStart( key, "override-" ) ).collect( Collectors.toList( ) ) );
         }
 
-        RequestAuthor author = new RequestAuthor( );
-        author.setName( getUser( ).getEmail( ) );
-        author.setType( AuthorType.application );
-
-        req.setOrigin( author );
+        req.setOrigin( buildAuthor( ) );
         req.setIdentities( identities );
 
         return req;
+    }
+
+    private RequestAuthor buildAuthor( )
+    {
+        RequestAuthor author = new RequestAuthor( );
+        author.setName( getUser( ).getEmail( ) );
+        author.setType( AuthorType.application );
+        return author;
     }
 
 }
