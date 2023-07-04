@@ -50,7 +50,6 @@ import fr.paris.lutece.plugins.identitystore.v3.web.rs.dto.crud.SuspiciousIdenti
 import fr.paris.lutece.plugins.identitystore.v3.web.rs.dto.duplicate.DuplicateRuleSummaryDto;
 import fr.paris.lutece.plugins.identitystore.v3.web.rs.dto.duplicate.DuplicateRuleSummarySearchResponse;
 import fr.paris.lutece.plugins.identitystore.v3.web.rs.dto.duplicate.DuplicateRuleSummarySearchStatusType;
-import fr.paris.lutece.plugins.identitystore.v3.web.rs.dto.merge.Identities;
 import fr.paris.lutece.plugins.identitystore.v3.web.rs.dto.merge.IdentityMergeRequest;
 import fr.paris.lutece.plugins.identitystore.v3.web.rs.dto.merge.IdentityMergeResponse;
 import fr.paris.lutece.plugins.identitystore.v3.web.rs.dto.merge.IdentityMergeStatus;
@@ -71,6 +70,7 @@ import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
 
 import javax.servlet.http.HttpServletRequest;
+import java.sql.Timestamp;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -733,26 +733,36 @@ public class IdentityDuplicateJspBean extends MVCAdminJspBean
     private IdentityMergeRequest buildMergeRequest( final HttpServletRequest request )
     {
         final IdentityMergeRequest req = new IdentityMergeRequest( );
-        final Identities identities = new Identities( );
-
-        identities.setPrimaryCuid( _identityToKeep.getCustomerId( ) );
-        identities.setSecondaryCuid( _identityToMerge.getCustomerId( ) );
+        req.setPrimaryCuid( _identityToKeep.getCustomerId( ) );
+        req.setSecondaryCuid( _identityToMerge.getCustomerId( ) );
         if ( request.getParameterMap( ).entrySet( ).stream( ).anyMatch( entry -> entry.getKey( ).startsWith( "override-" ) ) )
         {
-            identities.getAttributeKeys( )
-                    .addAll( request.getParameterMap( ).keySet( ).stream( ).filter( key -> key.startsWith( "override-" ) && !key.endsWith( "-certif" ) )
-                            .map( key -> StringUtils.removeStart( key, "override-" ) ).collect( Collectors.toList( ) ) );
+            final Identity identity = new Identity();
+            req.setIdentity(identity);
+            final List<String> keys = request.getParameterMap().keySet().stream().filter(key -> key.startsWith("override-") && !key.endsWith("-certif"))
+                    .map(key -> StringUtils.removeStart(key, "override-")).collect(Collectors.toList());
+            identity.getAttributes().addAll(keys.stream().map(key -> {
+                final String value = request.getParameter("override-" + key);
+                final String certif = request.getParameter("override-" + key + "-certif");
+                final String timestamp = request.getParameter("override-" + key + "-timestamp-certif");
+
+                final CertifiedAttribute certifiedAttribute = new CertifiedAttribute();
+                certifiedAttribute.setKey(key);
+                certifiedAttribute.setValue(value);
+                certifiedAttribute.setCertificationProcess(certif);
+                certifiedAttribute.setCertificationDate(new Timestamp(Long.parseLong(timestamp)));
+                return certifiedAttribute;
+            }).collect(Collectors.toList()));
         }
 
         req.setOrigin( buildAuthor( ) );
-        req.setIdentities( identities );
 
         return req;
     }
 
     private RequestAuthor buildAuthor( )
     {
-        RequestAuthor author = new RequestAuthor( );
+        final RequestAuthor author = new RequestAuthor( );
         author.setName( getUser( ).getEmail( ) );
         author.setType( AuthorType.application );
         return author;
