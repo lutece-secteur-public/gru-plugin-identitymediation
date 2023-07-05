@@ -290,6 +290,7 @@ public class IdentityDuplicateJspBean extends MVCAdminJspBean
                 return getDuplicateTypes( request );
             }
             identityList.addAll( duplicateList );
+            identityList.add(identity);
             sortByQuality( identityList );
         }
         catch( final IdentityStoreException e )

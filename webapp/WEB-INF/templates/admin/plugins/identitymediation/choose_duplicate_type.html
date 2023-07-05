@@ -31,7 +31,7 @@
                     <tr class="rule-tr">
                         <td><input type="radio" name="rule-id" value="${rule.id}"></td>
                         <td>${rule.name}</td>
-                        <td>${rule.description}</td>
+                        <td><pre>${rule.description}</pre></td>
                         <td>${rule.duplicateCount}</td>
                     </tr>
                 </#list>
@@ -46,3 +46,14 @@
         </@boxBody>
     </@rowBox>
 </form>
+
+<style>
+    pre {
+        background: inherit !important;
+        color: inherit !important;
+        font-family: inherit !important;
+        padding: 0 !important;
+        border-radius: unset !important;
+        font-size: inherit !important;
+    }
+</style>

@@ -5,22 +5,25 @@
        xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans.xsd" >
 
     <!-- IHttpTransportProvider declarations -->
-    <bean id="httpAccessTransport" class="fr.paris.lutece.plugins.identitystore.v3.web.service.HttpAccessTransport" />
+    <bean id="httpAccessTransport-ids" class="fr.paris.lutece.plugins.identitystore.v3.web.rs.service.HttpAccessTransport" >
+        <property name="apiEndPointUrl">
+            <value>${identitymediation.identityquality.endpoint}</value>
+        </property>
+    </bean>
+    <bean id="httpAccessTransport-idm" class="fr.paris.lutece.plugins.identityquality.v3.web.rs.service.HttpAccessTransport" >
+        <property name="apiEndPointUrl">
+            <value>${identitymediation.identityquality.endpoint}</value>
+        </property>
+    </bean>
 
     <bean id="restTransport.httpAccess" class="fr.paris.lutece.plugins.identityquality.v3.web.rs.service.IdentityQualityTransportRest">
-        <property name="IdentityStoreQualityEndPoint">
-            <value>${identitymediation.identityquality.endpoint}</value>
-        </property>
+        <constructor-arg ref="httpAccessTransport-idm" />
     </bean>
     <bean id="restTransport.serviceContract.httpAccess" class="fr.paris.lutece.plugins.identitystore.v3.web.rs.service.ServiceContractTransportRest">
-        <property name="IdentityStoreEndPoint">
-            <value>${identitymediation.identityquality.endpoint}</value>
-        </property>
+        <constructor-arg ref="httpAccessTransport-ids" />
     </bean>
     <bean id="restTransport.identity.httpAccess" class="fr.paris.lutece.plugins.identitystore.v3.web.rs.service.IdentityTransportRest">
-        <property name="IdentityStoreEndPoint">
-            <value>${identitymediation.identityquality.endpoint}</value>
-        </property>
+        <constructor-arg ref="httpAccessTransport-ids" />
     </bean>
 
     <!-- QualityService impl -->
