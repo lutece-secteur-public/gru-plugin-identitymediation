@@ -50,6 +50,7 @@ import fr.paris.lutece.plugins.identitystore.v3.web.rs.dto.crud.SuspiciousIdenti
 import fr.paris.lutece.plugins.identitystore.v3.web.rs.dto.duplicate.DuplicateRuleSummaryDto;
 import fr.paris.lutece.plugins.identitystore.v3.web.rs.dto.duplicate.DuplicateRuleSummarySearchResponse;
 import fr.paris.lutece.plugins.identitystore.v3.web.rs.dto.duplicate.DuplicateRuleSummarySearchStatusType;
+import fr.paris.lutece.plugins.identitystore.v3.web.rs.dto.lock.SuspiciousIdentityLockRequest;
 import fr.paris.lutece.plugins.identitystore.v3.web.rs.dto.merge.IdentityMergeRequest;
 import fr.paris.lutece.plugins.identitystore.v3.web.rs.dto.merge.IdentityMergeResponse;
 import fr.paris.lutece.plugins.identitystore.v3.web.rs.dto.merge.IdentityMergeStatus;
@@ -94,6 +95,8 @@ public class IdentityDuplicateJspBean extends MVCAdminJspBean
     private static final String MESSAGE_FETCH_DUPLICATE_HOLDERS_NORESULT = "identitymediation.message.fetch_duplicate_holders.noresult";
     private static final String MESSAGE_GET_SERVICE_CONTRACT_ERROR = "identitymediation.message.get_service_contract.error";
     private static final String MESSAGE_GET_IDENTITY_ERROR = "identitymediation.message.get_identity.error";
+    private static final String MESSAGE_LOCK_IDENTITY_ERROR = "identitymediation.message.lock_identity.error";
+    private static final String MESSAGE_UNLOCK_IDENTITY_ERROR = "identitymediation.message.unlock_identity.error";
     private static final String MESSAGE_SELECT_IDENTITIES_ERROR = "identitymediation.message.select_identities.error";
     private static final String MESSAGE_FETCH_DUPLICATES_ERROR = "identitymediation.message.fetch_duplicates.error";
     private static final String MESSAGE_FETCH_DUPLICATES_NORESULT = "identitymediation.message.fetch_duplicates.noresult";
@@ -290,7 +293,7 @@ public class IdentityDuplicateJspBean extends MVCAdminJspBean
                 return getDuplicateTypes( request );
             }
             identityList.addAll( duplicateList );
-            identityList.add(identity);
+            identityList.add( identity );
             sortByQuality( identityList );
         }
         catch( final IdentityStoreException e )
@@ -341,7 +344,16 @@ public class IdentityDuplicateJspBean extends MVCAdminJspBean
             return getDuplicateTypes( request );
         }
 
-        sendAcknoledgement( _identityToKeep, _identityToMerge );
+        try
+        {
+            sendAcknoledgement( _identityToKeep, _identityToMerge );
+        }
+        catch( IdentityStoreException e )
+        {
+            addError( MESSAGE_LOCK_IDENTITY_ERROR + e.getMessage( ), getLocale( ) );
+            addError( e.getMessage( ) );
+            return getDuplicateTypes( request );
+        }
 
         final Map<String, Object> model = getModel( );
         model.put( MARK_IDENTITY_TO_KEEP, _identityToKeep );
@@ -409,7 +421,16 @@ public class IdentityDuplicateJspBean extends MVCAdminJspBean
             return getDuplicateTypes( request );
         }
 
-        releaseAcknoledgement( _identityToKeep, _identityToMerge );
+        try
+        {
+            releaseAcknoledgement( _identityToKeep, _identityToMerge );
+        }
+        catch( IdentityStoreException e )
+        {
+            addError( MESSAGE_UNLOCK_IDENTITY_ERROR + e.getMessage( ), getLocale( ) );
+            addError( e.getMessage( ) );
+            return getDuplicateTypes( request );
+        }
         _identityToKeep = null;
         _identityToMerge = null;
 
@@ -460,7 +481,16 @@ public class IdentityDuplicateJspBean extends MVCAdminJspBean
             return getDuplicateTypes( request );
         }
 
-        releaseAcknoledgement( _identityToKeep, _identityToMerge );
+        try
+        {
+            releaseAcknoledgement( _identityToKeep, _identityToMerge );
+        }
+        catch( IdentityStoreException e )
+        {
+            addError( MESSAGE_UNLOCK_IDENTITY_ERROR + e.getMessage( ), getLocale( ) );
+            addError( e.getMessage( ) );
+            return getDuplicateTypes( request );
+        }
         _identityToKeep = null;
         _identityToMerge = null;
 
@@ -477,7 +507,16 @@ public class IdentityDuplicateJspBean extends MVCAdminJspBean
     @Action( ACTION_CANCEL )
     public String doCancel( final HttpServletRequest request )
     {
-        releaseAcknoledgement( _identityToKeep, _identityToMerge );
+        try
+        {
+            releaseAcknoledgement( _identityToKeep, _identityToMerge );
+        }
+        catch( IdentityStoreException e )
+        {
+            addError( MESSAGE_UNLOCK_IDENTITY_ERROR + e.getMessage( ), getLocale( ) );
+            addError( e.getMessage( ) );
+            return getDuplicateTypes( request );
+        }
         _identityToKeep = null;
         _identityToMerge = null;
         return getDuplicateTypes( request );
@@ -489,9 +528,19 @@ public class IdentityDuplicateJspBean extends MVCAdminJspBean
      * @param identity1
      * @param identity2
      */
-    private void sendAcknoledgement( final QualifiedIdentity identity1, final QualifiedIdentity identity2 )
+    private void sendAcknoledgement( final QualifiedIdentity identity1, final QualifiedIdentity identity2 ) throws IdentityStoreException
     {
-        // FIXME mock for now
+        final SuspiciousIdentityLockRequest requestFirstIdentity = new SuspiciousIdentityLockRequest( );
+        requestFirstIdentity.setOrigin( buildAuthor( ) );
+        requestFirstIdentity.setCustomerId( identity1.getCustomerId( ) );
+        requestFirstIdentity.setLocked( true );
+        _serviceQuality.lockIdentity( requestFirstIdentity, _currentClientCode );
+
+        final SuspiciousIdentityLockRequest requestSecondIdentity = new SuspiciousIdentityLockRequest( );
+        requestSecondIdentity.setOrigin( buildAuthor( ) );
+        requestSecondIdentity.setCustomerId( identity2.getCustomerId( ) );
+        requestSecondIdentity.setLocked( true );
+        _serviceQuality.lockIdentity( requestSecondIdentity, _currentClientCode );
     }
 
     /**
@@ -500,9 +549,19 @@ public class IdentityDuplicateJspBean extends MVCAdminJspBean
      * @param identity1
      * @param identity2
      */
-    private void releaseAcknoledgement( final QualifiedIdentity identity1, final QualifiedIdentity identity2 )
+    private void releaseAcknoledgement( final QualifiedIdentity identity1, final QualifiedIdentity identity2 ) throws IdentityStoreException
     {
-        // FIXME mock for now
+        final SuspiciousIdentityLockRequest requestFirstIdentity = new SuspiciousIdentityLockRequest( );
+        requestFirstIdentity.setOrigin( buildAuthor( ) );
+        requestFirstIdentity.setCustomerId( identity1.getCustomerId( ) );
+        requestFirstIdentity.setLocked( false );
+        _serviceQuality.lockIdentity( requestFirstIdentity, _currentClientCode );
+
+        final SuspiciousIdentityLockRequest requestSecondIdentity = new SuspiciousIdentityLockRequest( );
+        requestSecondIdentity.setOrigin( buildAuthor( ) );
+        requestSecondIdentity.setCustomerId( identity2.getCustomerId( ) );
+        requestSecondIdentity.setLocked( false );
+        _serviceQuality.lockIdentity( requestSecondIdentity, _currentClientCode );
     }
 
     /**
@@ -738,22 +797,23 @@ public class IdentityDuplicateJspBean extends MVCAdminJspBean
         req.setSecondaryCuid( _identityToMerge.getCustomerId( ) );
         if ( request.getParameterMap( ).entrySet( ).stream( ).anyMatch( entry -> entry.getKey( ).startsWith( "override-" ) ) )
         {
-            final Identity identity = new Identity();
-            req.setIdentity(identity);
-            final List<String> keys = request.getParameterMap().keySet().stream().filter(key -> key.startsWith("override-") && !key.endsWith("-certif"))
-                    .map(key -> StringUtils.removeStart(key, "override-")).collect(Collectors.toList());
-            identity.getAttributes().addAll(keys.stream().map(key -> {
-                final String value = request.getParameter("override-" + key);
-                final String certif = request.getParameter("override-" + key + "-certif");
-                final String timestamp = request.getParameter("override-" + key + "-timestamp-certif");
+            final Identity identity = new Identity( );
+            req.setIdentity( identity );
+            final List<String> keys = request.getParameterMap( ).keySet( ).stream( )
+                    .filter( key -> key.startsWith( "override-" ) && !key.endsWith( "-certif" ) ).map( key -> StringUtils.removeStart( key, "override-" ) )
+                    .collect( Collectors.toList( ) );
+            identity.getAttributes( ).addAll( keys.stream( ).map( key -> {
+                final String value = request.getParameter( "override-" + key );
+                final String certif = request.getParameter( "override-" + key + "-certif" );
+                final String timestamp = request.getParameter( "override-" + key + "-timestamp-certif" );
 
-                final CertifiedAttribute certifiedAttribute = new CertifiedAttribute();
-                certifiedAttribute.setKey(key);
-                certifiedAttribute.setValue(value);
-                certifiedAttribute.setCertificationProcess(certif);
-                certifiedAttribute.setCertificationDate(new Timestamp(Long.parseLong(timestamp)));
+                final CertifiedAttribute certifiedAttribute = new CertifiedAttribute( );
+                certifiedAttribute.setKey( key );
+                certifiedAttribute.setValue( value );
+                certifiedAttribute.setCertificationProcess( certif );
+                certifiedAttribute.setCertificationDate( new Timestamp( Long.parseLong( timestamp ) ) );
                 return certifiedAttribute;
-            }).collect(Collectors.toList()));
+            } ).collect( Collectors.toList( ) ) );
         }
 
         req.setOrigin( buildAuthor( ) );
