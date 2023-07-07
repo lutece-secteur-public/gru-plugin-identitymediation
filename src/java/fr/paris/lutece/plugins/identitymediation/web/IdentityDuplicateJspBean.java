@@ -51,6 +51,8 @@ import fr.paris.lutece.plugins.identitystore.v3.web.rs.dto.duplicate.DuplicateRu
 import fr.paris.lutece.plugins.identitystore.v3.web.rs.dto.duplicate.DuplicateRuleSummarySearchResponse;
 import fr.paris.lutece.plugins.identitystore.v3.web.rs.dto.duplicate.DuplicateRuleSummarySearchStatusType;
 import fr.paris.lutece.plugins.identitystore.v3.web.rs.dto.lock.SuspiciousIdentityLockRequest;
+import fr.paris.lutece.plugins.identitystore.v3.web.rs.dto.lock.SuspiciousIdentityLockResponse;
+import fr.paris.lutece.plugins.identitystore.v3.web.rs.dto.lock.SuspiciousIdentityLockStatus;
 import fr.paris.lutece.plugins.identitystore.v3.web.rs.dto.merge.IdentityMergeRequest;
 import fr.paris.lutece.plugins.identitystore.v3.web.rs.dto.merge.IdentityMergeResponse;
 import fr.paris.lutece.plugins.identitystore.v3.web.rs.dto.merge.IdentityMergeStatus;
@@ -72,13 +74,7 @@ import org.apache.commons.lang3.StringUtils;
 
 import javax.servlet.http.HttpServletRequest;
 import java.sql.Timestamp;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.Comparator;
-import java.util.Date;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.stream.Collectors;
 
 /**
@@ -534,13 +530,26 @@ public class IdentityDuplicateJspBean extends MVCAdminJspBean
         requestFirstIdentity.setOrigin( buildAuthor( ) );
         requestFirstIdentity.setCustomerId( identity1.getCustomerId( ) );
         requestFirstIdentity.setLocked( true );
-        _serviceQuality.lockIdentity( requestFirstIdentity, _currentClientCode );
+        final SuspiciousIdentityLockResponse response = _serviceQuality.lockIdentity(requestFirstIdentity, _currentClientCode);
+        if(!Objects.equals(SuspiciousIdentityLockStatus.SUCCESS, response.getStatus()))
+        {
+            throw new IdentityStoreException(response.getMessage());
+        }
 
         final SuspiciousIdentityLockRequest requestSecondIdentity = new SuspiciousIdentityLockRequest( );
         requestSecondIdentity.setOrigin( buildAuthor( ) );
         requestSecondIdentity.setCustomerId( identity2.getCustomerId( ) );
         requestSecondIdentity.setLocked( true );
         _serviceQuality.lockIdentity( requestSecondIdentity, _currentClientCode );
+        if(!Objects.equals(SuspiciousIdentityLockStatus.SUCCESS, response.getStatus()))
+        {
+            final SuspiciousIdentityLockRequest requestUnlockFirstIdentity = new SuspiciousIdentityLockRequest( );
+            requestUnlockFirstIdentity.setOrigin( buildAuthor( ) );
+            requestUnlockFirstIdentity.setCustomerId( identity1.getCustomerId( ) );
+            requestUnlockFirstIdentity.setLocked( false );
+            _serviceQuality.lockIdentity(requestUnlockFirstIdentity, _currentClientCode);
+            throw new IdentityStoreException(response.getMessage());
+        }
     }
 
     /**
