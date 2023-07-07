@@ -102,9 +102,9 @@
                         <th style="width: 500px;">
                             <div class="col-12">#i18n{identitymediation.resolve_duplicates.identityToKeep}</div>
                             <div class="col-12"><span class="quality-span">${identity_to_keep.quality}</span> %</div>
-                            <#list identity_to_keep.attributes?filter(a -> a.key == 'login') as attr>
+                            <#if identity_to_keep.monParisActive>
                                 <span class="badge mon-paris-badge">MON PARIS</span>
-                            </#list>
+                            </#if>
                         </th>
                         <th style="width: 300px;">
                             <span>
@@ -114,9 +114,9 @@
                         <th class="fw-normal">
                             <div class="col-12">#i18n{identitymediation.resolve_duplicates.identityToMerge}</div>
                             <div class="col-12"><span class="quality-span">${identity_to_merge.quality}</span> %</div>
-                            <#list identity_to_merge.attributes?filter(a -> a.key == 'login') as attr>
+                            <#if identity_to_merge.monParisActive>
                                 <span class="badge mon-paris-badge">MON PARIS</span>
-                            </#list>
+                            </#if>
                         </th>
                     </tr>
                     <@tableHeadBodySeparator />
