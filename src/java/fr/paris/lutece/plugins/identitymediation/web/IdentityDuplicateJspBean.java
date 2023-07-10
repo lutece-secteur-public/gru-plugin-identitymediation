@@ -455,7 +455,6 @@ public class IdentityDuplicateJspBean extends MVCAdminJspBean
         excludeRequest.setOrigin( buildAuthor( ) );
         excludeRequest.setIdentityCuid1( _identityToKeep.getCustomerId( ) );
         excludeRequest.setIdentityCuid2( _identityToMerge.getCustomerId( ) );
-        excludeRequest.setRuleId( _currentRuleId );
         try
         {
             final SuspiciousIdentityExcludeResponse response = _serviceQuality.excludeIdentities( excludeRequest, _currentClientCode );
