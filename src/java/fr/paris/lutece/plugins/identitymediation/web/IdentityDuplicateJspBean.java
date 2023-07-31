@@ -124,6 +124,7 @@ public class IdentityDuplicateJspBean extends MVCAdminJspBean
     private static final String PROPERTY_PAGE_TITLE_SEARCH_DUPLICATES = "identitymediation.search_duplicates.pageTitle";
     private static final String PROPERTY_PAGE_TITLE_SELECT_IDENTITIES = "identitymediation.select_identities.pageTitle";
     private static final String PROPERTY_PAGE_TITLE_RESOLVE_DUPLICATES = "identitymediation.resolve_duplicates.pageTitle";
+    private static final String PROPERTY_RULE_PRIORITY_MINIMUM = "identitymediation.rules.priority.minimum";
 
     // Markers
     private static final String MARK_DUPLICATE_RULE_LIST = "duplicate_rule_list";
@@ -146,6 +147,7 @@ public class IdentityDuplicateJspBean extends MVCAdminJspBean
     // Session variable to store working values
     private ServiceContractDto _serviceContract;
     private String _currentClientCode = AppPropertiesService.getProperty( "identitymediation.default.client.code" );
+    private Integer _rulePriorityMin = AppPropertiesService.getPropertyInt( PROPERTY_RULE_PRIORITY_MINIMUM, 100);
     private Integer _currentRuleId;
     private QualifiedIdentity _identityToKeep;
     private QualifiedIdentity _identityToMerge;
@@ -181,7 +183,7 @@ public class IdentityDuplicateJspBean extends MVCAdminJspBean
 
     private List<DuplicateRuleSummaryDto> fetchDuplicateRules( ) throws IdentityStoreException
     {
-        final DuplicateRuleSummarySearchResponse response = _serviceQuality.getAllDuplicateRules( _currentClientCode );
+        final DuplicateRuleSummarySearchResponse response = _serviceQuality.getAllDuplicateRules( _currentClientCode, _rulePriorityMin );
         if ( response == null )
         {
             throw new IdentityStoreException( "DuplicateRuleSummarySearchResponse is null." );
