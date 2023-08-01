@@ -148,7 +148,7 @@ public class IdentityDuplicateJspBean extends MVCAdminJspBean
     private ServiceContractDto _serviceContract;
     private String _currentClientCode = AppPropertiesService.getProperty( "identitymediation.default.client.code" );
     private Integer _rulePriorityMin = AppPropertiesService.getPropertyInt( PROPERTY_RULE_PRIORITY_MINIMUM, 100);
-    private Integer _currentRuleId;
+    private String _currentRuleCode;
     private QualifiedIdentity _identityToKeep;
     private QualifiedIdentity _identityToMerge;
 
@@ -216,7 +216,7 @@ public class IdentityDuplicateJspBean extends MVCAdminJspBean
             addError( MESSAGE_CHOOSE_DUPLICATE_TYPE_ERROR, getLocale( ) );
             return getDuplicateTypes( request );
         }
-        _currentRuleId = Integer.parseInt( ruleIdStr );
+        _currentRuleCode =  ruleIdStr ;
         final List<QualifiedIdentity> identities = new ArrayList<>( );
         try
         {
@@ -245,7 +245,7 @@ public class IdentityDuplicateJspBean extends MVCAdminJspBean
     private List<QualifiedIdentity> fetchPotentialDuplicateHolders( ) throws IdentityStoreException
     {
         final List<QualifiedIdentity> identities = new ArrayList<>( );
-        final SuspiciousIdentitySearchResponse response = _serviceQuality.getSuspiciousIdentities( _currentRuleId, 30, null, null );
+        final SuspiciousIdentitySearchResponse response = _serviceQuality.getSuspiciousIdentities( _currentRuleCode, 30, null, null );
         if ( response != null && response.getStatus( ) != SuspiciousIdentitySearchStatusType.FAILURE && response.getSuspiciousIdentities( ) != null )
         {
             for ( final SuspiciousIdentityDto suspiciousIdentity : response.getSuspiciousIdentities( ) )
@@ -667,7 +667,7 @@ public class IdentityDuplicateJspBean extends MVCAdminJspBean
      */
     private List<QualifiedIdentity> fetchPotentialDuplicates( final QualifiedIdentity identity ) throws IdentityStoreException
     {
-        final DuplicateSearchResponse response = _serviceQuality.getDuplicates( identity.getCustomerId( ), _currentRuleId, _currentClientCode, 30, null, null );
+        final DuplicateSearchResponse response = _serviceQuality.getDuplicates( identity.getCustomerId( ), _currentRuleCode, _currentClientCode, 30, null, null );
         if ( response != null && response.getIdentities( ) != null && !response.getIdentities( ).isEmpty( ) )
         {
             return response.getIdentities( );
