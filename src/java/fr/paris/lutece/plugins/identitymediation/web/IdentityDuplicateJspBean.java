@@ -38,13 +38,13 @@ import fr.paris.lutece.plugins.identityquality.v3.web.service.IdentityQualitySer
 import fr.paris.lutece.plugins.identitystore.v3.web.rs.dto.common.AuthorType;
 import fr.paris.lutece.plugins.identitystore.v3.web.rs.dto.common.RequestAuthor;
 import fr.paris.lutece.plugins.identitystore.v3.web.rs.dto.contract.ServiceContractDto;
-import fr.paris.lutece.plugins.identitystore.v3.web.rs.dto.crud.CertifiedAttribute;
 import fr.paris.lutece.plugins.identitystore.v3.web.rs.dto.crud.Identity;
 import fr.paris.lutece.plugins.identitystore.v3.web.rs.dto.crud.IdentityChangeRequest;
 import fr.paris.lutece.plugins.identitystore.v3.web.rs.dto.crud.SuspiciousIdentityDto;
 import fr.paris.lutece.plugins.identitystore.v3.web.rs.dto.crud.SuspiciousIdentityExcludeRequest;
 import fr.paris.lutece.plugins.identitystore.v3.web.rs.dto.crud.SuspiciousIdentityExcludeResponse;
 import fr.paris.lutece.plugins.identitystore.v3.web.rs.dto.crud.SuspiciousIdentityExcludeStatus;
+import fr.paris.lutece.plugins.identitystore.v3.web.rs.dto.crud.SuspiciousIdentitySearchRequest;
 import fr.paris.lutece.plugins.identitystore.v3.web.rs.dto.crud.SuspiciousIdentitySearchResponse;
 import fr.paris.lutece.plugins.identitystore.v3.web.rs.dto.crud.SuspiciousIdentitySearchStatusType;
 import fr.paris.lutece.plugins.identitystore.v3.web.rs.dto.duplicate.DuplicateRuleSummaryDto;
@@ -56,9 +56,11 @@ import fr.paris.lutece.plugins.identitystore.v3.web.rs.dto.lock.SuspiciousIdenti
 import fr.paris.lutece.plugins.identitystore.v3.web.rs.dto.merge.IdentityMergeRequest;
 import fr.paris.lutece.plugins.identitystore.v3.web.rs.dto.merge.IdentityMergeResponse;
 import fr.paris.lutece.plugins.identitystore.v3.web.rs.dto.merge.IdentityMergeStatus;
+import fr.paris.lutece.plugins.identitystore.v3.web.rs.dto.crud.CertifiedAttribute;
 import fr.paris.lutece.plugins.identitystore.v3.web.rs.dto.search.DuplicateSearchResponse;
 import fr.paris.lutece.plugins.identitystore.v3.web.rs.dto.search.IdentitySearchResponse;
 import fr.paris.lutece.plugins.identitystore.v3.web.rs.dto.search.QualifiedIdentity;
+import fr.paris.lutece.plugins.identitystore.v3.web.rs.util.Constants;
 import fr.paris.lutece.plugins.identitystore.v3.web.service.IdentityService;
 import fr.paris.lutece.plugins.identitystore.v3.web.service.ServiceContractService;
 import fr.paris.lutece.plugins.identitystore.web.exception.IdentityStoreException;
@@ -210,7 +212,7 @@ public class IdentityDuplicateJspBean extends MVCAdminJspBean
     @View( value = VIEW_SEARCH_DUPLICATES )
     public String getSearchDuplicates( final HttpServletRequest request )
     {
-        final String ruleIdStr = request.getParameter( "rule-id" );
+        final String ruleIdStr = request.getParameter( Constants.PARAM_RULE_CODE );
         if ( StringUtils.isBlank( ruleIdStr ) )
         {
             addError( MESSAGE_CHOOSE_DUPLICATE_TYPE_ERROR, getLocale( ) );
@@ -245,7 +247,10 @@ public class IdentityDuplicateJspBean extends MVCAdminJspBean
     private List<QualifiedIdentity> fetchPotentialDuplicateHolders( ) throws IdentityStoreException
     {
         final List<QualifiedIdentity> identities = new ArrayList<>( );
-        final SuspiciousIdentitySearchResponse response = _serviceQuality.getSuspiciousIdentities( _currentRuleCode, 30, null, null );
+        SuspiciousIdentitySearchRequest request = new SuspiciousIdentitySearchRequest();
+        request.setRuleCode(_currentRuleCode  );
+        // TODO : gérer la pagination
+        final SuspiciousIdentitySearchResponse response = _serviceQuality.getSuspiciousIdentities(  request, _currentClientCode, 200, 1, 50 );
         if ( response != null && response.getStatus( ) != SuspiciousIdentitySearchStatusType.FAILURE && response.getSuspiciousIdentities( ) != null )
         {
             for ( final SuspiciousIdentityDto suspiciousIdentity : response.getSuspiciousIdentities( ) )
@@ -299,12 +304,26 @@ public class IdentityDuplicateJspBean extends MVCAdminJspBean
             addError( MESSAGE_FETCH_DUPLICATES_ERROR, getLocale( ) );
             return getDuplicateTypes( request );
         }
-
+        
         final Map<String, Object> model = getModel( );
         model.put( MARK_IDENTITY_LIST, identityList );
         model.put( MARK_SERVICE_CONTRACT, _serviceContract );
-
-        return getPage( PROPERTY_PAGE_TITLE_SELECT_IDENTITIES, TEMPLATE_SELECT_IDENTITIES, model );
+        
+        if ( identityList.size( ) == 2 )
+        {
+        	// skip selection, resolve directly
+        	Map<String,String> cuidMap = new HashMap<String, String>( );
+        	cuidMap.put( "identity-cuid-1", identityList.get( 0 ).getCustomerId( ) );
+        	cuidMap.put( "identity-cuid-2", identityList.get( 1 ).getCustomerId( ) );
+        	
+        	return redirect(  request, VIEW_RESOLVE_DUPLICATES, cuidMap );
+        }
+        else
+        {
+        	// Go to pair selection page
+        	return getPage( PROPERTY_PAGE_TITLE_SELECT_IDENTITIES, TEMPLATE_SELECT_IDENTITIES, model );
+        	
+        }
     }
 
     /**

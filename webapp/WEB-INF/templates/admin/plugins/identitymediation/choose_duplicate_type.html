@@ -1,18 +1,7 @@
-<script type="text/javascript">
-    $(function () {
-        $('.action-box').hide();
-        $('#select-duplicate-type-table tr.rule-tr').click(function () {
-            $(this).find('input:radio').prop('checked', true);
-            $('.action-box').show();
-        });
-    });
-</script>
 
-<form class="form-inline" action="jsp/admin/plugins/identitymediation/IdentityDuplicate.jsp">
+
     <@rowBox>
         <@boxHeader i18nTitleKey="identitymediation.choose_duplicate_type.pageTitle">
-            <@headerButtons>
-            </@headerButtons>
         </@boxHeader>
         <@boxBody>
             <@messages infos=infos />
@@ -21,31 +10,27 @@
 
             <@table id='select-duplicate-type-table'>
                 <tr>
-                    <th></th>
                     <th>#i18n{identitymediation.choose_duplicate_type.ruleColumn}</th>
                     <th>#i18n{identitymediation.choose_duplicate_type.descriptionColumn}</th>
                     <th>#i18n{identitymediation.choose_duplicate_type.pendingColumn}</th>
+                    <th></th>
                 </tr>
                 <@tableHeadBodySeparator />
                 <#list duplicate_rule_list as rule>
                     <tr class="rule-tr">
-                        <td><input type="radio" name="rule-id" value="${rule.code}"></td>
                         <td>${rule.name}</td>
                         <td><pre>${rule.description}</pre></td>
                         <td>${rule.duplicateCount}</td>
+                        <td><@aButton  href='jsp/admin/plugins/identitymediation/IdentityDuplicate.jsp?view_searchDuplicates&code=${rule.code}'
+                        			title='#i18n{identitymediation.choose_duplicate_type.buttonSearch}'
+                        			buttonIcon='search' />
+                        </td>
                     </tr>
                 </#list>
             </@table>
         </@boxBody>
     </@rowBox>
-    <@rowBox boxClass="action-box" >
-        <@boxBody>
-            <button id="search-btn" class="btn btn-warning" name="view_searchDuplicates" >
-                #i18n{identitymediation.choose_duplicate_type.buttonSearch}
-            </button>
-        </@boxBody>
-    </@rowBox>
-</form>
+
 
 <style>
     pre {
@@ -57,3 +42,13 @@
         font-size: inherit !important;
     }
 </style>
+
+
+
+
+
+
+
+            <button id="search-btn" class="btn btn-warning" name="view_searchDuplicates" >
+                #i18n{identitymediation.choose_duplicate_type.buttonSearch}
+            </button>
