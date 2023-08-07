@@ -137,7 +137,6 @@ public class IdentityDuplicateJspBean extends MVCAdminJspBean
     private static final String MARK_IDENTITY_TO_MERGE = "identity_to_merge";
 
     // Beans
-    private static final ServiceContractCache _serviceContractCache = SpringContextService.getBean( "identitymediation.serviceContractCache" );
     private static final IdentityQualityService _serviceQuality = SpringContextService.getBean( "identityQualityService.rest.httpAccess" );
     private static final ServiceContractService _serviceContractService = SpringContextService.getBean( "serviceContract.rest.httpAccess" );
     private static final IdentityService _serviceIdentity = SpringContextService.getBean( "identityService.rest.httpAccess" );
@@ -149,10 +148,11 @@ public class IdentityDuplicateJspBean extends MVCAdminJspBean
     // Session variable to store working values
     private ServiceContractDto _serviceContract;
     private String _currentClientCode = AppPropertiesService.getProperty( "identitymediation.default.client.code" );
-    private Integer _rulePriorityMin = AppPropertiesService.getPropertyInt( PROPERTY_RULE_PRIORITY_MINIMUM, 100);
+    private final Integer _rulePriorityMin = AppPropertiesService.getPropertyInt( PROPERTY_RULE_PRIORITY_MINIMUM, 100);
     private String _currentRuleCode;
     private QualifiedIdentity _identityToKeep;
     private QualifiedIdentity _identityToMerge;
+    private QualifiedIdentity _suspiciousIdentity;
 
     /**
      *
@@ -162,6 +162,7 @@ public class IdentityDuplicateJspBean extends MVCAdminJspBean
     @View( value = VIEW_CHOOSE_DUPLICATE_TYPE, defaultView = true )
     public String getDuplicateTypes( final HttpServletRequest request )
     {
+        _suspiciousIdentity = null;
         initClientCode( request );
         initServiceContract( _currentClientCode );
 
@@ -212,6 +213,7 @@ public class IdentityDuplicateJspBean extends MVCAdminJspBean
     @View( value = VIEW_SEARCH_DUPLICATES )
     public String getSearchDuplicates( final HttpServletRequest request )
     {
+        _suspiciousIdentity = null;
         final String ruleIdStr = request.getParameter( Constants.PARAM_RULE_CODE );
         if ( StringUtils.isBlank( ruleIdStr ) )
         {
@@ -270,11 +272,10 @@ public class IdentityDuplicateJspBean extends MVCAdminJspBean
     @View( value = VIEW_SELECT_IDENTITIES )
     public String getSelectIdentities( final HttpServletRequest request )
     {
-        final QualifiedIdentity identity;
         try
         {
-            identity = getQualifiedIdentityFromCustomerId( request.getParameter( "cuid" ) );
-            if ( identity == null )
+            _suspiciousIdentity = getQualifiedIdentityFromCustomerId( request.getParameter( "cuid" ) );
+            if ( _suspiciousIdentity == null )
             {
                 addError( MESSAGE_GET_IDENTITY_ERROR, getLocale( ) );
                 return getDuplicateTypes( request );
@@ -289,14 +290,14 @@ public class IdentityDuplicateJspBean extends MVCAdminJspBean
         final List<QualifiedIdentity> identityList = new ArrayList<>( );
         try
         {
-            final List<QualifiedIdentity> duplicateList = fetchPotentialDuplicates( identity );
+            final List<QualifiedIdentity> duplicateList = fetchPotentialDuplicates( _suspiciousIdentity );
             if ( CollectionUtils.isEmpty( duplicateList ) )
             {
                 addError( MESSAGE_FETCH_DUPLICATES_NORESULT, getLocale( ) );
                 return getDuplicateTypes( request );
             }
             identityList.addAll( duplicateList );
-            identityList.add( identity );
+            identityList.add( _suspiciousIdentity );
             sortByQuality( identityList );
         }
         catch( final IdentityStoreException e )
@@ -312,7 +313,7 @@ public class IdentityDuplicateJspBean extends MVCAdminJspBean
         if ( identityList.size( ) == 2 )
         {
         	// skip selection, resolve directly
-        	Map<String,String> cuidMap = new HashMap<String, String>( );
+        	final Map<String,String> cuidMap = new HashMap<>();
         	cuidMap.put( "identity-cuid-1", identityList.get( 0 ).getCustomerId( ) );
         	cuidMap.put( "identity-cuid-2", identityList.get( 1 ).getCustomerId( ) );
         	
@@ -363,7 +364,7 @@ public class IdentityDuplicateJspBean extends MVCAdminJspBean
 
         try
         {
-            sendAcknoledgement( _identityToKeep, _identityToMerge );
+            sendAcknowledgement( _suspiciousIdentity );
         }
         catch( IdentityStoreException e )
         {
@@ -440,7 +441,7 @@ public class IdentityDuplicateJspBean extends MVCAdminJspBean
 
         try
         {
-            releaseAcknoledgement( _identityToKeep, _identityToMerge );
+            releaseAcknowledgement( _suspiciousIdentity );
         }
         catch( IdentityStoreException e )
         {
@@ -499,7 +500,7 @@ public class IdentityDuplicateJspBean extends MVCAdminJspBean
 
         try
         {
-            releaseAcknoledgement( _identityToKeep, _identityToMerge );
+            releaseAcknowledgement( _suspiciousIdentity );
         }
         catch( IdentityStoreException e )
         {
@@ -515,7 +516,7 @@ public class IdentityDuplicateJspBean extends MVCAdminJspBean
     }
 
     /**
-     * Cancel and release the acknolegement for the 2 selected identities.
+     * Cancel and release the acknowledgement for the 2 selected identities.
      *
      * @param request
      * @return
@@ -525,7 +526,7 @@ public class IdentityDuplicateJspBean extends MVCAdminJspBean
     {
         try
         {
-            releaseAcknoledgement( _identityToKeep, _identityToMerge );
+            releaseAcknowledgement( _suspiciousIdentity );
         }
         catch( IdentityStoreException e )
         {
@@ -539,58 +540,35 @@ public class IdentityDuplicateJspBean extends MVCAdminJspBean
     }
 
     /**
-     * Send an acknolegement to the backend to mark both identities as being currently resolved.
+     * Send an acknowledgement to the backend to mark current suspiciousIdentity as being currently resolved.
      *
-     * @param identity1
-     * @param identity2
+     * @param suspiciousIdentity
      */
-    private void sendAcknoledgement( final QualifiedIdentity identity1, final QualifiedIdentity identity2 ) throws IdentityStoreException
+    private void sendAcknowledgement(final QualifiedIdentity suspiciousIdentity) throws IdentityStoreException
     {
-        final SuspiciousIdentityLockRequest requestFirstIdentity = new SuspiciousIdentityLockRequest( );
-        requestFirstIdentity.setOrigin( buildAuthor( ) );
-        requestFirstIdentity.setCustomerId( identity1.getCustomerId( ) );
-        requestFirstIdentity.setLocked( true );
-        final SuspiciousIdentityLockResponse response = _serviceQuality.lockIdentity(requestFirstIdentity, _currentClientCode);
+        final SuspiciousIdentityLockRequest lockRequest = new SuspiciousIdentityLockRequest( );
+        lockRequest.setOrigin( buildAuthor( ) );
+        lockRequest.setCustomerId( suspiciousIdentity.getCustomerId( ) );
+        lockRequest.setLocked( true );
+        final SuspiciousIdentityLockResponse response = _serviceQuality.lockIdentity(lockRequest, _currentClientCode);
         if(!Objects.equals(SuspiciousIdentityLockStatus.SUCCESS, response.getStatus()))
         {
-            throw new IdentityStoreException(response.getMessage());
-        }
-
-        final SuspiciousIdentityLockRequest requestSecondIdentity = new SuspiciousIdentityLockRequest( );
-        requestSecondIdentity.setOrigin( buildAuthor( ) );
-        requestSecondIdentity.setCustomerId( identity2.getCustomerId( ) );
-        requestSecondIdentity.setLocked( true );
-        _serviceQuality.lockIdentity( requestSecondIdentity, _currentClientCode );
-        if(!Objects.equals(SuspiciousIdentityLockStatus.SUCCESS, response.getStatus()))
-        {
-            final SuspiciousIdentityLockRequest requestUnlockFirstIdentity = new SuspiciousIdentityLockRequest( );
-            requestUnlockFirstIdentity.setOrigin( buildAuthor( ) );
-            requestUnlockFirstIdentity.setCustomerId( identity1.getCustomerId( ) );
-            requestUnlockFirstIdentity.setLocked( false );
-            _serviceQuality.lockIdentity(requestUnlockFirstIdentity, _currentClientCode);
             throw new IdentityStoreException(response.getMessage());
         }
     }
 
     /**
-     * Send an acknolegement release to the backend for both identities.
+     * Send an acknowledgement release to the backend for current suspiciousIdentity.
      *
-     * @param identity1
-     * @param identity2
+     * @param suspiciousIdentity
      */
-    private void releaseAcknoledgement( final QualifiedIdentity identity1, final QualifiedIdentity identity2 ) throws IdentityStoreException
+    private void releaseAcknowledgement(final QualifiedIdentity suspiciousIdentity ) throws IdentityStoreException
     {
-        final SuspiciousIdentityLockRequest requestFirstIdentity = new SuspiciousIdentityLockRequest( );
-        requestFirstIdentity.setOrigin( buildAuthor( ) );
-        requestFirstIdentity.setCustomerId( identity1.getCustomerId( ) );
-        requestFirstIdentity.setLocked( false );
-        _serviceQuality.lockIdentity( requestFirstIdentity, _currentClientCode );
-
-        final SuspiciousIdentityLockRequest requestSecondIdentity = new SuspiciousIdentityLockRequest( );
-        requestSecondIdentity.setOrigin( buildAuthor( ) );
-        requestSecondIdentity.setCustomerId( identity2.getCustomerId( ) );
-        requestSecondIdentity.setLocked( false );
-        _serviceQuality.lockIdentity( requestSecondIdentity, _currentClientCode );
+        final SuspiciousIdentityLockRequest lockRequest = new SuspiciousIdentityLockRequest( );
+        lockRequest.setOrigin( buildAuthor( ) );
+        lockRequest.setCustomerId( suspiciousIdentity.getCustomerId( ) );
+        lockRequest.setLocked( false );
+        _serviceQuality.lockIdentity( lockRequest, _currentClientCode );
     }
 
     /**
