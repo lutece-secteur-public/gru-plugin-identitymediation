@@ -148,7 +148,7 @@ public class IdentityDuplicateJspBean extends MVCAdminJspBean
     // Session variable to store working values
     private ServiceContractDto _serviceContract;
     private String _currentClientCode = AppPropertiesService.getProperty( "identitymediation.default.client.code" );
-    private final Integer _rulePriorityMin = AppPropertiesService.getPropertyInt( PROPERTY_RULE_PRIORITY_MINIMUM, 100);
+    private final Integer _rulePriorityMin = AppPropertiesService.getPropertyInt( PROPERTY_RULE_PRIORITY_MINIMUM, 100 );
     private String _currentRuleCode;
     private QualifiedIdentity _identityToKeep;
     private QualifiedIdentity _identityToMerge;
@@ -220,7 +220,7 @@ public class IdentityDuplicateJspBean extends MVCAdminJspBean
             addError( MESSAGE_CHOOSE_DUPLICATE_TYPE_ERROR, getLocale( ) );
             return getDuplicateTypes( request );
         }
-        _currentRuleCode =  ruleIdStr ;
+        _currentRuleCode = ruleIdStr;
         final List<QualifiedIdentity> identities = new ArrayList<>( );
         try
         {
@@ -249,10 +249,10 @@ public class IdentityDuplicateJspBean extends MVCAdminJspBean
     private List<QualifiedIdentity> fetchPotentialDuplicateHolders( ) throws IdentityStoreException
     {
         final List<QualifiedIdentity> identities = new ArrayList<>( );
-        SuspiciousIdentitySearchRequest request = new SuspiciousIdentitySearchRequest();
-        request.setRuleCode(_currentRuleCode  );
+        SuspiciousIdentitySearchRequest request = new SuspiciousIdentitySearchRequest( );
+        request.setRuleCode( _currentRuleCode );
         // TODO : gérer la pagination
-        final SuspiciousIdentitySearchResponse response = _serviceQuality.getSuspiciousIdentities(  request, _currentClientCode, 200, 1, 50 );
+        final SuspiciousIdentitySearchResponse response = _serviceQuality.getSuspiciousIdentities( request, _currentClientCode, 200, 1, 50 );
         if ( response != null && response.getStatus( ) != SuspiciousIdentitySearchStatusType.FAILURE && response.getSuspiciousIdentities( ) != null )
         {
             for ( final SuspiciousIdentityDto suspiciousIdentity : response.getSuspiciousIdentities( ) )
@@ -305,25 +305,25 @@ public class IdentityDuplicateJspBean extends MVCAdminJspBean
             addError( MESSAGE_FETCH_DUPLICATES_ERROR, getLocale( ) );
             return getDuplicateTypes( request );
         }
-        
+
         final Map<String, Object> model = getModel( );
         model.put( MARK_IDENTITY_LIST, identityList );
         model.put( MARK_SERVICE_CONTRACT, _serviceContract );
-        
+
         if ( identityList.size( ) == 2 )
         {
-        	// skip selection, resolve directly
-        	final Map<String,String> cuidMap = new HashMap<>();
-        	cuidMap.put( "identity-cuid-1", identityList.get( 0 ).getCustomerId( ) );
-        	cuidMap.put( "identity-cuid-2", identityList.get( 1 ).getCustomerId( ) );
-        	
-        	return redirect(  request, VIEW_RESOLVE_DUPLICATES, cuidMap );
+            // skip selection, resolve directly
+            final Map<String, String> cuidMap = new HashMap<>( );
+            cuidMap.put( "identity-cuid-1", identityList.get( 0 ).getCustomerId( ) );
+            cuidMap.put( "identity-cuid-2", identityList.get( 1 ).getCustomerId( ) );
+
+            return redirect( request, VIEW_RESOLVE_DUPLICATES, cuidMap );
         }
         else
         {
-        	// Go to pair selection page
-        	return getPage( PROPERTY_PAGE_TITLE_SELECT_IDENTITIES, TEMPLATE_SELECT_IDENTITIES, model );
-        	
+            // Go to pair selection page
+            return getPage( PROPERTY_PAGE_TITLE_SELECT_IDENTITIES, TEMPLATE_SELECT_IDENTITIES, model );
+
         }
     }
 
@@ -544,16 +544,16 @@ public class IdentityDuplicateJspBean extends MVCAdminJspBean
      *
      * @param suspiciousIdentity
      */
-    private void sendAcknowledgement(final QualifiedIdentity suspiciousIdentity) throws IdentityStoreException
+    private void sendAcknowledgement( final QualifiedIdentity suspiciousIdentity ) throws IdentityStoreException
     {
         final SuspiciousIdentityLockRequest lockRequest = new SuspiciousIdentityLockRequest( );
         lockRequest.setOrigin( buildAuthor( ) );
         lockRequest.setCustomerId( suspiciousIdentity.getCustomerId( ) );
         lockRequest.setLocked( true );
-        final SuspiciousIdentityLockResponse response = _serviceQuality.lockIdentity(lockRequest, _currentClientCode);
-        if(!Objects.equals(SuspiciousIdentityLockStatus.SUCCESS, response.getStatus()))
+        final SuspiciousIdentityLockResponse response = _serviceQuality.lockIdentity( lockRequest, _currentClientCode );
+        if ( !Objects.equals( SuspiciousIdentityLockStatus.SUCCESS, response.getStatus( ) ) )
         {
-            throw new IdentityStoreException(response.getMessage());
+            throw new IdentityStoreException( response.getMessage( ) );
         }
     }
 
@@ -562,7 +562,7 @@ public class IdentityDuplicateJspBean extends MVCAdminJspBean
      *
      * @param suspiciousIdentity
      */
-    private void releaseAcknowledgement(final QualifiedIdentity suspiciousIdentity ) throws IdentityStoreException
+    private void releaseAcknowledgement( final QualifiedIdentity suspiciousIdentity ) throws IdentityStoreException
     {
         final SuspiciousIdentityLockRequest lockRequest = new SuspiciousIdentityLockRequest( );
         lockRequest.setOrigin( buildAuthor( ) );
@@ -664,7 +664,8 @@ public class IdentityDuplicateJspBean extends MVCAdminJspBean
      */
     private List<QualifiedIdentity> fetchPotentialDuplicates( final QualifiedIdentity identity ) throws IdentityStoreException
     {
-        final DuplicateSearchResponse response = _serviceQuality.getDuplicates( identity.getCustomerId( ), _currentRuleCode, _currentClientCode, 30, null, null );
+        final DuplicateSearchResponse response = _serviceQuality.getDuplicates( identity.getCustomerId( ), _currentRuleCode, _currentClientCode, 30, null,
+                null );
         if ( response != null && response.getIdentities( ) != null && !response.getIdentities( ).isEmpty( ) )
         {
             return response.getIdentities( );
