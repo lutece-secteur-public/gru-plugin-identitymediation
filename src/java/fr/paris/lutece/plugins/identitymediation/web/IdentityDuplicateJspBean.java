@@ -33,7 +33,6 @@
  */
 package fr.paris.lutece.plugins.identitymediation.web;
 
-import fr.paris.lutece.plugins.identitymediation.cache.ServiceContractCache;
 import fr.paris.lutece.plugins.identityquality.v3.web.service.IdentityQualityService;
 import fr.paris.lutece.plugins.identitystore.v3.web.rs.dto.common.AuthorType;
 import fr.paris.lutece.plugins.identitystore.v3.web.rs.dto.common.RequestAuthor;
@@ -480,7 +479,7 @@ public class IdentityDuplicateJspBean extends MVCAdminJspBean
         try
         {
             final SuspiciousIdentityExcludeResponse response = _serviceQuality.excludeIdentities( excludeRequest, _currentClientCode );
-            if ( response.getStatus( ) != SuspiciousIdentityExcludeStatus.EXCLUDE_SUCCESS )
+            if ( response.getStatus( ) != SuspiciousIdentityExcludeStatus.SUCCESS )
             {
                 addError( MESSAGE_EXCLUDE_DUPLICATES_ERROR, getLocale( ) );
                 AppLogService.error( response.getMessage( ) );
