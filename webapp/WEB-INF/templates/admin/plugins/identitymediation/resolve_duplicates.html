@@ -101,7 +101,7 @@
                         <th style="width: 400px;">&nbsp;</th>
                         <th style="width: 500px;">
                             <div class="col-12">#i18n{identitymediation.resolve_duplicates.identityToKeep}</div>
-                            <div class="col-12"><span class="quality-span">${identity_to_keep.quality}</span> %</div>
+                            <div class="col-12"><span class="quality-span">${identity_to_keep.quality.quality}</span> %</div>
                             <#if identity_to_keep.monParisActive>
                                 <span class="badge mon-paris-badge">MON PARIS</span>
                             </#if>
@@ -113,7 +113,7 @@
                         </th>
                         <th class="fw-normal">
                             <div class="col-12">#i18n{identitymediation.resolve_duplicates.identityToMerge}</div>
-                            <div class="col-12"><span class="quality-span">${identity_to_merge.quality}</span> %</div>
+                            <div class="col-12"><span class="quality-span">${identity_to_merge.quality.quality}</span> %</div>
                             <#if identity_to_merge.monParisActive>
                                 <span class="badge mon-paris-badge">MON PARIS</span>
                             </#if>

@@ -34,10 +34,8 @@
 package fr.paris.lutece.plugins.identitymediation.web;
 
 import fr.paris.lutece.plugins.identityquality.v3.web.service.IdentityQualityService;
-import fr.paris.lutece.plugins.identitystore.v3.web.rs.dto.common.AuthorType;
-import fr.paris.lutece.plugins.identitystore.v3.web.rs.dto.common.RequestAuthor;
+import fr.paris.lutece.plugins.identitystore.v3.web.rs.dto.common.*;
 import fr.paris.lutece.plugins.identitystore.v3.web.rs.dto.contract.ServiceContractDto;
-import fr.paris.lutece.plugins.identitystore.v3.web.rs.dto.crud.Identity;
 import fr.paris.lutece.plugins.identitystore.v3.web.rs.dto.crud.IdentityChangeRequest;
 import fr.paris.lutece.plugins.identitystore.v3.web.rs.dto.crud.SuspiciousIdentityDto;
 import fr.paris.lutece.plugins.identitystore.v3.web.rs.dto.crud.SuspiciousIdentityExcludeRequest;
@@ -55,10 +53,8 @@ import fr.paris.lutece.plugins.identitystore.v3.web.rs.dto.lock.SuspiciousIdenti
 import fr.paris.lutece.plugins.identitystore.v3.web.rs.dto.merge.IdentityMergeRequest;
 import fr.paris.lutece.plugins.identitystore.v3.web.rs.dto.merge.IdentityMergeResponse;
 import fr.paris.lutece.plugins.identitystore.v3.web.rs.dto.merge.IdentityMergeStatus;
-import fr.paris.lutece.plugins.identitystore.v3.web.rs.dto.crud.CertifiedAttribute;
 import fr.paris.lutece.plugins.identitystore.v3.web.rs.dto.search.DuplicateSearchResponse;
 import fr.paris.lutece.plugins.identitystore.v3.web.rs.dto.search.IdentitySearchResponse;
-import fr.paris.lutece.plugins.identitystore.v3.web.rs.dto.search.QualifiedIdentity;
 import fr.paris.lutece.plugins.identitystore.v3.web.rs.util.Constants;
 import fr.paris.lutece.plugins.identitystore.v3.web.service.IdentityService;
 import fr.paris.lutece.plugins.identitystore.v3.web.service.ServiceContractService;
@@ -149,9 +145,9 @@ public class IdentityDuplicateJspBean extends MVCAdminJspBean
     private String _currentClientCode = AppPropertiesService.getProperty( "identitymediation.default.client.code" );
     private final Integer _rulePriorityMin = AppPropertiesService.getPropertyInt( PROPERTY_RULE_PRIORITY_MINIMUM, 100 );
     private String _currentRuleCode;
-    private QualifiedIdentity _identityToKeep;
-    private QualifiedIdentity _identityToMerge;
-    private QualifiedIdentity _suspiciousIdentity;
+    private IdentityDto _identityToKeep;
+    private IdentityDto _identityToMerge;
+    private IdentityDto _suspiciousIdentity;
 
     /**
      *
@@ -220,7 +216,7 @@ public class IdentityDuplicateJspBean extends MVCAdminJspBean
             return getDuplicateTypes( request );
         }
         _currentRuleCode = ruleIdStr;
-        final List<QualifiedIdentity> identities = new ArrayList<>( );
+        final List<IdentityDto> identities = new ArrayList<>( );
         try
         {
             identities.addAll( fetchPotentialDuplicateHolders( ) );
@@ -245,9 +241,9 @@ public class IdentityDuplicateJspBean extends MVCAdminJspBean
     /**
      * Fetches identities that are likely to have duplicates.
      */
-    private List<QualifiedIdentity> fetchPotentialDuplicateHolders( ) throws IdentityStoreException
+    private List<IdentityDto> fetchPotentialDuplicateHolders( ) throws IdentityStoreException
     {
-        final List<QualifiedIdentity> identities = new ArrayList<>( );
+        final List<IdentityDto> identities = new ArrayList<>( );
         SuspiciousIdentitySearchRequest request = new SuspiciousIdentitySearchRequest( );
         request.setRuleCode( _currentRuleCode );
         // TODO : gérer la pagination
@@ -286,10 +282,10 @@ public class IdentityDuplicateJspBean extends MVCAdminJspBean
             return getDuplicateTypes( request );
         }
 
-        final List<QualifiedIdentity> identityList = new ArrayList<>( );
+        final List<IdentityDto> identityList = new ArrayList<>( );
         try
         {
-            final List<QualifiedIdentity> duplicateList = fetchPotentialDuplicates( _suspiciousIdentity );
+            final List<IdentityDto> duplicateList = fetchPotentialDuplicates( _suspiciousIdentity );
             if ( CollectionUtils.isEmpty( duplicateList ) )
             {
                 addError( MESSAGE_FETCH_DUPLICATES_NORESULT, getLocale( ) );
@@ -345,8 +341,8 @@ public class IdentityDuplicateJspBean extends MVCAdminJspBean
         }
         try
         {
-            final QualifiedIdentity identity1 = getQualifiedIdentityFromCustomerId( cuidList.get( 0 ) );
-            final QualifiedIdentity identity2 = getQualifiedIdentityFromCustomerId( cuidList.get( 1 ) );
+            final IdentityDto identity1 = getQualifiedIdentityFromCustomerId( cuidList.get( 0 ) );
+            final IdentityDto identity2 = getQualifiedIdentityFromCustomerId( cuidList.get( 1 ) );
 
             if ( identity1 == null || identity2 == null )
             {
@@ -389,7 +385,7 @@ public class IdentityDuplicateJspBean extends MVCAdminJspBean
     @Action( ACTION_SWAP_IDENTITIES )
     public String doSwapIdentities( final HttpServletRequest request )
     {
-        final QualifiedIdentity previouslyToKeep = _identityToKeep;
+        final IdentityDto previouslyToKeep = _identityToKeep;
         _identityToKeep = _identityToMerge;
         _identityToMerge = previouslyToKeep;
 
@@ -543,7 +539,7 @@ public class IdentityDuplicateJspBean extends MVCAdminJspBean
      *
      * @param suspiciousIdentity
      */
-    private void sendAcknowledgement( final QualifiedIdentity suspiciousIdentity ) throws IdentityStoreException
+    private void sendAcknowledgement( final IdentityDto suspiciousIdentity ) throws IdentityStoreException
     {
         final SuspiciousIdentityLockRequest lockRequest = new SuspiciousIdentityLockRequest( );
         lockRequest.setOrigin( buildAuthor( ) );
@@ -561,7 +557,7 @@ public class IdentityDuplicateJspBean extends MVCAdminJspBean
      *
      * @param suspiciousIdentity
      */
-    private void releaseAcknowledgement( final QualifiedIdentity suspiciousIdentity ) throws IdentityStoreException
+    private void releaseAcknowledgement( final IdentityDto suspiciousIdentity ) throws IdentityStoreException
     {
         final SuspiciousIdentityLockRequest lockRequest = new SuspiciousIdentityLockRequest( );
         lockRequest.setOrigin( buildAuthor( ) );
@@ -575,9 +571,10 @@ public class IdentityDuplicateJspBean extends MVCAdminJspBean
      *
      * @param identityList
      */
-    private void sortByQuality( final List<QualifiedIdentity> identityList )
+    private void sortByQuality( final List<IdentityDto> identityList )
     {
-        identityList.sort( Comparator.comparing( QualifiedIdentity::getQuality ).reversed( ) );
+        final Comparator<QualityDefinition> qualityComparator = Comparator.comparingDouble( QualityDefinition::getQuality ).reversed( );
+        identityList.sort( Comparator.comparing( IdentityDto::getQuality, qualityComparator ) );
     }
 
     /**
@@ -587,13 +584,13 @@ public class IdentityDuplicateJspBean extends MVCAdminJspBean
      * @param identity1
      * @param identity2
      */
-    private void setWorkedIdentities( final QualifiedIdentity identity1, final QualifiedIdentity identity2 )
+    private void setWorkedIdentities( final IdentityDto identity1, final IdentityDto identity2 )
     {
-        if ( identity1.isMonParisActive( ) )
+        if ( identity1.isMonParisActive( ) && identity1.getQuality( ) != null )
         {
-            if ( identity2.isMonParisActive( ) )
+            if ( identity2.isMonParisActive( ) && identity2.getQuality( ) != null )
             {
-                if ( identity1.getQuality( ) >= identity2.getQuality( ) )
+                if ( identity1.getQuality( ).getQuality( ) >= identity2.getQuality( ).getQuality( ) )
                 {
                     _identityToKeep = identity1;
                     _identityToMerge = identity2;
@@ -619,7 +616,7 @@ public class IdentityDuplicateJspBean extends MVCAdminJspBean
             }
             else
             {
-                if ( identity1.getQuality( ) >= identity2.getQuality( ) )
+                if ( identity1.getQuality( ).getQuality( ) >= identity2.getQuality( ).getQuality( ) )
                 {
                     _identityToKeep = identity1;
                     _identityToMerge = identity2;
@@ -640,7 +637,7 @@ public class IdentityDuplicateJspBean extends MVCAdminJspBean
      * @return the QualifiedIdentity , null otherwise
      * @throws IdentityStoreException
      */
-    private QualifiedIdentity getQualifiedIdentityFromCustomerId( final String customerId ) throws IdentityStoreException
+    private IdentityDto getQualifiedIdentityFromCustomerId( final String customerId ) throws IdentityStoreException
     {
         if ( StringUtils.isNotBlank( customerId ) )
         {
@@ -653,7 +650,7 @@ public class IdentityDuplicateJspBean extends MVCAdminJspBean
         return null;
     }
 
-    private final List<QualifiedIdentity> _mockPotentialDuplicateList = new ArrayList<>( );
+    private final List<IdentityDto> _mockPotentialDuplicateList = new ArrayList<>( );
 
     /**
      * Fetches identities that are likely to be duplicates of the identity passed in parameter.
@@ -661,7 +658,7 @@ public class IdentityDuplicateJspBean extends MVCAdminJspBean
      * @param identity
      * @return the List of potential duplicates.
      */
-    private List<QualifiedIdentity> fetchPotentialDuplicates( final QualifiedIdentity identity ) throws IdentityStoreException
+    private List<IdentityDto> fetchPotentialDuplicates( final IdentityDto identity ) throws IdentityStoreException
     {
         final DuplicateSearchResponse response = _serviceQuality.getDuplicates( identity.getCustomerId( ), _currentRuleCode, _currentClientCode, 30, null,
                 null );
@@ -768,7 +765,7 @@ public class IdentityDuplicateJspBean extends MVCAdminJspBean
             return null;
         }
         final IdentityChangeRequest changeRequest = new IdentityChangeRequest( );
-        final Identity identity = new Identity( );
+        final IdentityDto identity = new IdentityDto( );
         identity.setCustomerId( _identityToKeep.getCustomerId( ) );
         identity.setConnectionId( _identityToKeep.getConnectionId( ) );
 
@@ -779,10 +776,10 @@ public class IdentityDuplicateJspBean extends MVCAdminJspBean
                     final String certif = request.getParameter( overrideKey + "-certif" );
                     final String timestamp = request.getParameter( overrideKey + "-timestamp-certif" );
 
-                    final CertifiedAttribute attr = new CertifiedAttribute( );
+                    final AttributeDto attr = new AttributeDto( );
                     attr.setKey( StringUtils.removeStart( overrideKey, "override-" ) );
                     attr.setValue( value );
-                    attr.setCertificationProcess( certif );
+                    attr.setCertifier( certif );
                     attr.setCertificationDate( new Date( Long.parseLong( timestamp ) ) );
                     identity.getAttributes( ).add( attr );
                 } );
@@ -804,7 +801,7 @@ public class IdentityDuplicateJspBean extends MVCAdminJspBean
         req.setSecondaryCuid( _identityToMerge.getCustomerId( ) );
         if ( request.getParameterMap( ).entrySet( ).stream( ).anyMatch( entry -> entry.getKey( ).startsWith( "override-" ) ) )
         {
-            final Identity identity = new Identity( );
+            final IdentityDto identity = new IdentityDto( );
             req.setIdentity( identity );
             final List<String> keys = request.getParameterMap( ).keySet( ).stream( )
                     .filter( key -> key.startsWith( "override-" ) && !key.endsWith( "-certif" ) ).map( key -> StringUtils.removeStart( key, "override-" ) )
@@ -814,12 +811,12 @@ public class IdentityDuplicateJspBean extends MVCAdminJspBean
                 final String certif = request.getParameter( "override-" + key + "-certif" );
                 final String timestamp = request.getParameter( "override-" + key + "-timestamp-certif" );
 
-                final CertifiedAttribute certifiedAttribute = new CertifiedAttribute( );
-                certifiedAttribute.setKey( key );
-                certifiedAttribute.setValue( value );
-                certifiedAttribute.setCertificationProcess( certif );
-                certifiedAttribute.setCertificationDate( new Timestamp( Long.parseLong( timestamp ) ) );
-                return certifiedAttribute;
+                final AttributeDto attributeDto = new AttributeDto( );
+                attributeDto.setKey( key );
+                attributeDto.setValue( value );
+                attributeDto.setCertifier( certif );
+                attributeDto.setCertificationDate( new Timestamp( Long.parseLong( timestamp ) ) );
+                return attributeDto;
             } ).collect( Collectors.toList( ) ) );
         }
 
