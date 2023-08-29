@@ -631,7 +631,7 @@ public class IdentityDuplicateJspBean extends MVCAdminJspBean
     {
         if ( StringUtils.isNotBlank( customerId ) )
         {
-            final IdentitySearchResponse identityResponse = _serviceIdentity.getIdentityByCustomerId( customerId, _currentClientCode );
+            final IdentitySearchResponse identityResponse = _serviceIdentity.getIdentityByCustomerId( customerId, _currentClientCode, this.buildAuthor( ) );
             if ( identityResponse != null && identityResponse.getIdentities( ) != null && identityResponse.getIdentities( ).size( ) == 1 )
             {
                 return identityResponse.getIdentities( ).get( 0 );
