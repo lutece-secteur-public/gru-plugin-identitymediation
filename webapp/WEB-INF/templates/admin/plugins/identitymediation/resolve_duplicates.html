@@ -103,7 +103,7 @@
                             <div class="col-12">#i18n{identitymediation.resolve_duplicates.identityToKeep}</div>
                             <div class="col-12"><span class="quality-span">${identity_to_keep.quality.quality}</span> %</div>
                             <#if identity_to_keep.monParisActive>
-                                <span class="badge mon-paris-badge">MON PARIS</span>
+                                <span class="badge bg-warning mon-paris-badge">MON PARIS</span>
                             </#if>
                         </th>
                         <th style="width: 300px;">
@@ -115,7 +115,7 @@
                             <div class="col-12">#i18n{identitymediation.resolve_duplicates.identityToMerge}</div>
                             <div class="col-12"><span class="quality-span">${identity_to_merge.quality.quality}</span> %</div>
                             <#if identity_to_merge.monParisActive>
-                                <span class="badge mon-paris-badge">MON PARIS</span>
+                                <span class="badge bg-warning mon-paris-badge">MON PARIS</span>
                             </#if>
                         </th>
                     </tr>
@@ -140,7 +140,7 @@
                             <td></td>
                             <td>
                                 <#list identity_to_merge.attributes?filter(a -> a.key == readableAttr.keyName) as attr>
-                                    <#if identity_to_keep.attributes?filter(a -> a.key == readableAttr.keyName)?size == 0 && readableAttr.attributeRight.writable >
+                                    <#if identity_to_keep.attributes?filter(a -> a.key == readableAttr.keyName)?size == 1 && readableAttr.attributeRight.writable >
                                         <@button class='arrow-button' buttonIcon='arrow-left' params='data-key="${attr.key}" data-value="${attr.value}" data-certif="${attr.certifier}" data-certifdate="${attr.certificationDate?date}" data-timestamp-certif="${attr.certificationDate?long}"' />
                                     </#if>
                                     <span class="${attr.key}-value">${attr.value}</span>
