@@ -339,7 +339,7 @@ public class IdentityDuplicateJspBean extends MVCAdminJspBean
                 addError( MESSAGE_GET_IDENTITY_ERROR, getLocale( ) );
                 return getDuplicateTypes( request );
             }
-            setWorkedIdentities( identity1, identity2 );
+            sortWorkedIdentities( identity1, identity2 );
         }
         catch( final IdentityStoreException e )
         {
@@ -568,56 +568,47 @@ public class IdentityDuplicateJspBean extends MVCAdminJspBean
     }
 
     /**
-     * Init worked identities for resolve duplicate screen. Identity to keep is set with the identity having an active Mon Paris account, and/or better quality
-     * score.
-     * 
+     * Init worked identities for resolve duplicate screen. 
+     * Identity to keep is : 
+     *  - the identity having an active "Mon Paris" account if there's only one identity having a "Mon Paris" account
+     *  - the identity having the better quality score otherwise
+	 *
      * @param identity1
      * @param identity2
      */
-    private void setWorkedIdentities( final IdentityDto identity1, final IdentityDto identity2 )
+    private void sortWorkedIdentities( final IdentityDto identity1, final IdentityDto identity2 )
     {
-        if ( identity1.isMonParisActive( ) && identity1.getQuality( ) != null )
+    	
+    	// id1 is connected
+    	if ( identity1.isMonParisActive( ) && !identity2.isMonParisActive( ) ) 
+    	{
+    		_identityToKeep = identity1;
+            _identityToMerge = identity2;
+            return;
+    	}
+    	
+    	// id2 is connected
+    	if ( !identity1.isMonParisActive( ) && identity2.isMonParisActive( ) ) 
+    	{
+    		_identityToKeep = identity2;
+            _identityToMerge = identity1;
+            return;
+    	}
+    	
+    	// otherwise sort by quality 
+    	if ( identity1.getQuality( )!= null && identity2.getQuality( )!= null 
+    			&& identity1.getQuality( ).getQuality( ) < identity2.getQuality( ).getQuality( ) )
         {
-            if ( identity2.isMonParisActive( ) && identity2.getQuality( ) != null )
-            {
-                if ( identity1.getQuality( ).getQuality( ) >= identity2.getQuality( ).getQuality( ) )
-                {
-                    _identityToKeep = identity1;
-                    _identityToMerge = identity2;
-                }
-                else
-                {
-                    _identityToKeep = identity2;
-                    _identityToMerge = identity1;
-                }
-            }
-            else
-            {
-                _identityToKeep = identity1;
-                _identityToMerge = identity2;
-            }
+    		_identityToKeep = identity2;
+            _identityToMerge = identity1;
         }
-        else
-        {
-            if ( identity2.isMonParisActive( ) )
-            {
-                _identityToKeep = identity2;
-                _identityToMerge = identity1;
-            }
-            else
-            {
-                if ( identity1.getQuality( ).getQuality( ) >= identity2.getQuality( ).getQuality( ) )
-                {
-                    _identityToKeep = identity1;
-                    _identityToMerge = identity2;
-                }
-                else
-                {
-                    _identityToKeep = identity2;
-                    _identityToMerge = identity1;
-                }
-            }
-        }
+    	else
+    	{
+	    	// default
+			_identityToKeep = identity1;
+	        _identityToMerge = identity2;
+    	}
+  
     }
 
     /**
@@ -787,8 +778,15 @@ public class IdentityDuplicateJspBean extends MVCAdminJspBean
     private IdentityMergeRequest buildMergeRequest( final HttpServletRequest request )
     {
         final IdentityMergeRequest req = new IdentityMergeRequest( );
+        
         req.setPrimaryCuid( _identityToKeep.getCustomerId( ) );
+        req.setPrimaryLastUpdateDate( _identityToKeep.getLastUpdateDate( ) );
+        
         req.setSecondaryCuid( _identityToMerge.getCustomerId( ) );
+        req.setSecondaryLastUpdateDate( _identityToMerge.getLastUpdateDate( ) );
+        
+        req.setDuplicateRuleCode( _currentRuleCode );
+        
         if ( request.getParameterMap( ).entrySet( ).stream( ).anyMatch( entry -> entry.getKey( ).startsWith( "override-" ) ) )
         {
             final IdentityDto identity = new IdentityDto( );
