@@ -169,6 +169,12 @@ public class IdentityDuplicateJspBean extends MVCAdminJspBean
         return getPage( PROPERTY_PAGE_TITLE_CHOOSE_DUPLICATE_TYPE, TEMPLATE_CHOOSE_DUPLICATE_TYPE, model );
     }
 
+    /**
+     * fetch duplicate rules
+     * 
+     * @return list of rules
+     * @throws IdentityStoreException
+     */
     private List<DuplicateRuleSummaryDto> fetchDuplicateRules( ) throws IdentityStoreException
     {
         final DuplicateRuleSummarySearchResponse response = _serviceQuality.getAllDuplicateRules( _currentClientCode, _rulePriorityMin );
@@ -230,6 +236,9 @@ public class IdentityDuplicateJspBean extends MVCAdminJspBean
 
     /**
      * Fetches identities that are likely to have duplicates.
+     * 
+     * @return the list of identities
+     * @throws IdentityStoreException
      */
     private List<IdentityDto> fetchPotentialDuplicateHolders( ) throws IdentityStoreException
     {
@@ -252,7 +261,7 @@ public class IdentityDuplicateJspBean extends MVCAdminJspBean
      * Returns the form to select which identities to process
      * 
      * @param request
-     * @return
+     * @return the view
      */
     @View( value = VIEW_SELECT_IDENTITIES )
     public String getSelectIdentities( final HttpServletRequest request )
@@ -370,7 +379,7 @@ public class IdentityDuplicateJspBean extends MVCAdminJspBean
      * Swaps the selected identities to work with.
      * 
      * @param request
-     * @return
+     * @return the view
      */
     @Action( ACTION_SWAP_IDENTITIES )
     public String doSwapIdentities( final HttpServletRequest request )
@@ -409,7 +418,13 @@ public class IdentityDuplicateJspBean extends MVCAdminJspBean
             final IdentityMergeResponse response = _serviceIdentity.mergeIdentities( identityMergeRequest, _currentClientCode );
             if ( response.getStatus( ) == ResponseStatusType.FAILURE )
             {
-                addError( MESSAGE_MERGE_DUPLICATES_ERROR, getLocale( ) );
+            	addError( MESSAGE_MERGE_DUPLICATES_ERROR , getLocale( ) );
+            	
+            	// TODO : get i18n msg
+            	if ( response.getMessage( ) != null )
+            	{
+            		addError( response.getMessage( ) );
+            	}
                 _identityToKeep = null;
                 _identityToMerge = null;
                 return getDuplicateTypes( request );
@@ -734,47 +749,13 @@ public class IdentityDuplicateJspBean extends MVCAdminJspBean
         }
     }
 
+    
     /**
-     * Build the update request in case of attributes copied from a duplicate.
+     * buil merge request 
      * 
-     * @return the request ready to be sent, null if no update needed.
+     * @param request
+     * @return the IdentityMergeRequests
      */
-    private IdentityChangeRequest buildIdentityChangeRequest( final HttpServletRequest request )
-    {
-        if ( request.getParameterMap( ).entrySet( ).stream( ).noneMatch( entry -> entry.getKey( ).startsWith( "override-" ) ) )
-        {
-            return null;
-        }
-        final IdentityChangeRequest changeRequest = new IdentityChangeRequest( );
-        final IdentityDto identity = new IdentityDto( );
-        identity.setCustomerId( _identityToKeep.getCustomerId( ) );
-        identity.setConnectionId( _identityToKeep.getConnectionId( ) );
-
-        request.getParameterMap( ).entrySet( ).stream( ).filter( entry -> entry.getKey( ).startsWith( "override-" ) && !entry.getKey( ).endsWith( "-certif" ) )
-                .forEach( entry -> {
-                    final String overrideKey = entry.getKey( );
-                    final String value = entry.getValue( ) [0];
-                    final String certif = request.getParameter( overrideKey + "-certif" );
-                    final String timestamp = request.getParameter( overrideKey + "-timestamp-certif" );
-
-                    final AttributeDto attr = new AttributeDto( );
-                    attr.setKey( StringUtils.removeStart( overrideKey, "override-" ) );
-                    attr.setValue( value );
-                    attr.setCertifier( certif );
-                    attr.setCertificationDate( new Date( Long.parseLong( timestamp ) ) );
-                    identity.getAttributes( ).add( attr );
-                } );
-
-        RequestAuthor author = new RequestAuthor( );
-        author.setName( getUser( ).getEmail( ) );
-        author.setType( AuthorType.application );
-
-        changeRequest.setIdentity( identity );
-        changeRequest.setOrigin( author );
-
-        return changeRequest;
-    }
-
     private IdentityMergeRequest buildMergeRequest( final HttpServletRequest request )
     {
         final IdentityMergeRequest req = new IdentityMergeRequest( );
