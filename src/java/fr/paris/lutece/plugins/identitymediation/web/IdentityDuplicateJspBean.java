@@ -40,6 +40,12 @@ import fr.paris.lutece.plugins.identitystore.v3.web.rs.dto.contract.ServiceContr
 import fr.paris.lutece.plugins.identitystore.v3.web.rs.dto.crud.*;
 import fr.paris.lutece.plugins.identitystore.v3.web.rs.dto.duplicate.DuplicateRuleSummaryDto;
 import fr.paris.lutece.plugins.identitystore.v3.web.rs.dto.duplicate.DuplicateRuleSummarySearchResponse;
+import fr.paris.lutece.plugins.identitystore.v3.web.rs.dto.history.AttributeChange;
+import fr.paris.lutece.plugins.identitystore.v3.web.rs.dto.history.AttributeHistory;
+import fr.paris.lutece.plugins.identitystore.v3.web.rs.dto.history.IdentityChangeType;
+import fr.paris.lutece.plugins.identitystore.v3.web.rs.dto.history.IdentityHistory;
+import fr.paris.lutece.plugins.identitystore.v3.web.rs.dto.history.IdentityHistorySearchRequest;
+import fr.paris.lutece.plugins.identitystore.v3.web.rs.dto.history.IdentityHistorySearchResponse;
 import fr.paris.lutece.plugins.identitystore.v3.web.rs.dto.lock.SuspiciousIdentityLockRequest;
 import fr.paris.lutece.plugins.identitystore.v3.web.rs.dto.lock.SuspiciousIdentityLockResponse;
 import fr.paris.lutece.plugins.identitystore.v3.web.rs.dto.merge.IdentityMergeRequest;
@@ -128,6 +134,7 @@ public class IdentityDuplicateJspBean extends MVCAdminJspBean
     private static final String MARK_IDENTITY_TO_MERGE = "identity_to_merge";
     private static final String MARK_CURRENT_RULE_CODE = "current_rule_code";
     private static final String MARK_MEDIATION_IDENTITY_LIST = "mediation_identity_list";
+    private static final String MARK_IDENTITY_HISTORY_DATE_LIST = "identity_history_date_list";
 
     // Beans
     private static final IdentityQualityService _serviceQuality = SpringContextService.getBean( "identityQualityService.rest.httpAccess" );
@@ -223,11 +230,15 @@ public class IdentityDuplicateJspBean extends MVCAdminJspBean
         final List<IdentityDto> identities = new ArrayList<>( );
         final List<DuplicateRuleSummaryDto> duplicateRules = new ArrayList<>( );
         final List<MediationIdentity> mediationIdentities = new ArrayList<>( );
+        final Map<Long, Map<IdentityDto, List<AttributeChange>>> identityHistoryDateList = new HashMap<>( );
+
         try
         {
             duplicateRules.addAll( fetchDuplicateRules( ) );
             identities.addAll( fetchPotentialDuplicateHolders( request ) );
             mediationIdentities.addAll( fetchMediationIdentities( identities ) );
+            identityHistoryDateList.putAll( fetchItentityHistoryByDate( 30 ) );
+
             if ( CollectionUtils.isEmpty( identities ) )
             {
                 addInfo( MESSAGE_FETCH_DUPLICATE_HOLDERS_NORESULT, getLocale( ) );
@@ -248,6 +259,7 @@ public class IdentityDuplicateJspBean extends MVCAdminJspBean
         model.put( MARK_DUPLICATE_RULE_LIST, duplicateRules );
         model.put( MARK_CURRENT_RULE_CODE, _currentRuleCode );
         model.put( MARK_MEDIATION_IDENTITY_LIST, mediationIdentities );
+        model.put( MARK_IDENTITY_HISTORY_DATE_LIST, identityHistoryDateList );  
 
         return getPage( PROPERTY_PAGE_TITLE_SEARCH_DUPLICATES, TEMPLATE_SEARCH_DUPLICATES, model );
     }
@@ -879,6 +891,53 @@ public class IdentityDuplicateJspBean extends MVCAdminJspBean
         }
     
         return listIdentityToMerge;
+    }
+
+    /**
+    * Fetches the history of identity changes within the specified time frame, organized by date and identity.
+    * 
+    * @param nDaysFrom The number of days to fetch history records for.
+    * @return A map containing identity history grouped by modification time.
+    * @throws IdentityStoreException If there is an issue with the identity store.
+    */
+    private Map<Long, Map<IdentityDto, List<AttributeChange>>> fetchItentityHistoryByDate( Integer nDaysFrom ) throws IdentityStoreException {
+        long currentTime = new Date().getTime();
+        long nDaysInMillis = nDaysFrom * 24 * 60 * 60 * 1000L;
+        Map<Long, Map<IdentityDto, List<AttributeChange>>> groupedAttributes = new HashMap<>();
+    
+        IdentityHistorySearchRequest request = new IdentityHistorySearchRequest();
+        request.setClientCode(_currentClientCode);
+        request.setNbDaysFrom(30);
+        request.setIdentityChangeType(IdentityChangeType.CONSOLIDATED);
+        if( _currentRuleCode != null ) {
+            request.setMetadata(Map.of(Constants.METADATA_DUPLICATE_RULE_CODE, _currentRuleCode));
+        }
+        request.setOrigin(buildAuthor());
+    
+        IdentityHistorySearchResponse response = _serviceIdentity.searchIdentityHistory(request, _currentClientCode);
+        if (response != null && response.getStatus() != ResponseStatusType.FAILURE && response.getHistories() != null) {
+            Map<String, IdentityDto> identityMap = new HashMap<>();
+    
+            for (IdentityHistory h : response.getHistories()) {
+                identityMap.putIfAbsent(h.getCustomerId(), getQualifiedIdentityFromCustomerId(h.getCustomerId()));
+                for (AttributeHistory ah : h.getAttributeHistories()) {
+                    for (AttributeChange ac : ah.getAttributeChanges()) {
+                        long modTime = Optional.ofNullable(ac.getModificationDate()).map(Date::getTime).orElse(0L);
+                        if (Math.abs(currentTime - modTime) <= nDaysInMillis) {
+                            long key = (modTime / (1000 * 60)) * (1000 * 60);
+                            IdentityDto idDto = identityMap.get(h.getCustomerId());
+    
+                            groupedAttributes
+                                    .computeIfAbsent(key, k -> new HashMap<>())
+                                    .computeIfAbsent(idDto, k -> new ArrayList<>())
+                                    .add(ac);
+                        }
+                    }
+                }
+            }
+        }
+    
+        return groupedAttributes;
     }
 
 }
