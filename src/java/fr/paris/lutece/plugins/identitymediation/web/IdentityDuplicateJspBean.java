@@ -34,9 +34,19 @@
 package fr.paris.lutece.plugins.identitymediation.web;
 
 import fr.paris.lutece.plugins.identityquality.v3.web.service.IdentityQualityService;
-import fr.paris.lutece.plugins.identitystore.v3.web.rs.dto.common.*;
+import fr.paris.lutece.plugins.identitystore.v3.web.rs.dto.common.AttributeDto;
+import fr.paris.lutece.plugins.identitystore.v3.web.rs.dto.common.AuthorType;
+import fr.paris.lutece.plugins.identitystore.v3.web.rs.dto.common.IdentityDto;
+import fr.paris.lutece.plugins.identitystore.v3.web.rs.dto.common.QualityDefinition;
+import fr.paris.lutece.plugins.identitystore.v3.web.rs.dto.common.RequestAuthor;
+import fr.paris.lutece.plugins.identitystore.v3.web.rs.dto.common.ResponseStatus;
 import fr.paris.lutece.plugins.identitystore.v3.web.rs.dto.contract.ServiceContractDto;
-import fr.paris.lutece.plugins.identitystore.v3.web.rs.dto.crud.*;
+import fr.paris.lutece.plugins.identitystore.v3.web.rs.dto.crud.IdentityChangeRequest;
+import fr.paris.lutece.plugins.identitystore.v3.web.rs.dto.crud.SuspiciousIdentityDto;
+import fr.paris.lutece.plugins.identitystore.v3.web.rs.dto.crud.SuspiciousIdentityExcludeRequest;
+import fr.paris.lutece.plugins.identitystore.v3.web.rs.dto.crud.SuspiciousIdentityExcludeResponse;
+import fr.paris.lutece.plugins.identitystore.v3.web.rs.dto.crud.SuspiciousIdentitySearchRequest;
+import fr.paris.lutece.plugins.identitystore.v3.web.rs.dto.crud.SuspiciousIdentitySearchResponse;
 import fr.paris.lutece.plugins.identitystore.v3.web.rs.dto.duplicate.DuplicateRuleSummaryDto;
 import fr.paris.lutece.plugins.identitystore.v3.web.rs.dto.duplicate.DuplicateRuleSummarySearchResponse;
 import fr.paris.lutece.plugins.identitystore.v3.web.rs.dto.lock.SuspiciousIdentityLockRequest;
@@ -61,7 +71,15 @@ import org.apache.commons.lang3.StringUtils;
 
 import javax.servlet.http.HttpServletRequest;
 import java.sql.Timestamp;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.Comparator;
+import java.util.Date;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
 import java.util.stream.Collectors;
 
 /**
@@ -176,11 +194,11 @@ public class IdentityDuplicateJspBean extends MVCAdminJspBean
         {
             throw new IdentityStoreException( "DuplicateRuleSummarySearchResponse is null." );
         }
-        if ( response.getStatus( ) == ResponseStatusType.FAILURE )
+        if ( Objects.equals( response.getStatus( ), ResponseStatus.failure( ) ) )
         {
             throw new IdentityStoreException( "Status of DuplicateRuleSummarySearchResponse is FAILURE. Message = " + response.getStatus( ).getName( ) );
         }
-        if ( response.getStatus( ) == ResponseStatusType.NOT_FOUND || CollectionUtils.isEmpty( response.getDuplicateRuleSummaries( ) ) )
+        if ( Objects.equals( response.getStatus( ), ResponseStatus.notFound( ) ) || CollectionUtils.isEmpty( response.getDuplicateRuleSummaries( ) ) )
         {
             AppLogService.error( "No duplicate rules found." );
             addError( MESSAGE_FETCH_DUPLICATE_RULES_NORESULT, getLocale( ) );
@@ -238,7 +256,7 @@ public class IdentityDuplicateJspBean extends MVCAdminJspBean
         request.setRuleCode( _currentRuleCode );
         // TODO : gérer la pagination
         final SuspiciousIdentitySearchResponse response = _serviceQuality.getSuspiciousIdentities( request, _currentClientCode, 200, 1, 50 );
-        if ( response != null && response.getStatus( ) != ResponseStatusType.FAILURE && response.getSuspiciousIdentities( ) != null )
+        if ( response != null && !Objects.equals( response.getStatus( ), ResponseStatus.failure( ) ) && response.getSuspiciousIdentities( ) != null )
         {
             for ( final SuspiciousIdentityDto suspiciousIdentity : response.getSuspiciousIdentities( ) )
             {
@@ -407,7 +425,7 @@ public class IdentityDuplicateJspBean extends MVCAdminJspBean
         {
             final IdentityMergeRequest identityMergeRequest = buildMergeRequest( request );
             final IdentityMergeResponse response = _serviceIdentity.mergeIdentities( identityMergeRequest, _currentClientCode );
-            if ( response.getStatus( ) == ResponseStatusType.FAILURE )
+            if ( Objects.equals( response.getStatus( ), ResponseStatus.failure( ) ) )
             {
                 addError( MESSAGE_MERGE_DUPLICATES_ERROR, getLocale( ) );
                 _identityToKeep = null;
@@ -465,10 +483,10 @@ public class IdentityDuplicateJspBean extends MVCAdminJspBean
         try
         {
             final SuspiciousIdentityExcludeResponse response = _serviceQuality.excludeIdentities( excludeRequest, _currentClientCode );
-            if ( response.getStatus( ) != ResponseStatusType.SUCCESS )
+            if ( !Objects.equals( response.getStatus( ), ResponseStatus.success( ) ) )
             {
                 addError( MESSAGE_EXCLUDE_DUPLICATES_ERROR, getLocale( ) );
-                AppLogService.error( response.getMessage( ) );
+                AppLogService.error( response.getStatus( ).getMessage( ) );
                 _identityToKeep = null;
                 _identityToMerge = null;
                 return getDuplicateTypes( request );
@@ -536,9 +554,9 @@ public class IdentityDuplicateJspBean extends MVCAdminJspBean
         lockRequest.setCustomerId( suspiciousIdentity.getCustomerId( ) );
         lockRequest.setLocked( true );
         final SuspiciousIdentityLockResponse response = _serviceQuality.lockIdentity( lockRequest, _currentClientCode );
-        if ( !Objects.equals( ResponseStatusType.SUCCESS, response.getStatus( ) ) )
+        if ( !Objects.equals( ResponseStatus.success( ), response.getStatus( ) ) )
         {
-            throw new IdentityStoreException( response.getMessage( ) );
+            throw new IdentityStoreException( response.getStatus( ).getMessage( ) );
         }
     }
 
