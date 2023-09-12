@@ -33,6 +33,7 @@
  */
 package fr.paris.lutece.plugins.identitymediation.web;
 
+import fr.paris.lutece.plugins.identitymediation.buisness.MediationIdentity;
 import fr.paris.lutece.plugins.identityquality.v3.web.service.IdentityQualityService;
 import fr.paris.lutece.plugins.identitystore.v3.web.rs.dto.common.*;
 import fr.paris.lutece.plugins.identitystore.v3.web.rs.dto.contract.ServiceContractDto;
@@ -126,6 +127,7 @@ public class IdentityDuplicateJspBean extends MVCAdminJspBean
     private static final String MARK_IDENTITY_TO_KEEP = "identity_to_keep";
     private static final String MARK_IDENTITY_TO_MERGE = "identity_to_merge";
     private static final String MARK_CURRENT_RULE_CODE = "current_rule_code";
+    private static final String MARK_MEDIATION_IDENTITY_LIST = "mediation_identity_list";
 
     // Beans
     private static final IdentityQualityService _serviceQuality = SpringContextService.getBean( "identityQualityService.rest.httpAccess" );
@@ -220,10 +222,12 @@ public class IdentityDuplicateJspBean extends MVCAdminJspBean
         _currentRuleCode = ruleIdStr;
         final List<IdentityDto> identities = new ArrayList<>( );
         final List<DuplicateRuleSummaryDto> duplicateRules = new ArrayList<>( );
+        final List<MediationIdentity> mediationIdentities = new ArrayList<>( );
         try
         {
             duplicateRules.addAll( fetchDuplicateRules( ) );
             identities.addAll( fetchPotentialDuplicateHolders( request ) );
+            mediationIdentities.addAll( fetchMediationIdentities( identities ) );
             if ( CollectionUtils.isEmpty( identities ) )
             {
                 addInfo( MESSAGE_FETCH_DUPLICATE_HOLDERS_NORESULT, getLocale( ) );
@@ -243,6 +247,7 @@ public class IdentityDuplicateJspBean extends MVCAdminJspBean
         model.put( MARK_SERVICE_CONTRACT, _serviceContract );
         model.put( MARK_DUPLICATE_RULE_LIST, duplicateRules );
         model.put( MARK_CURRENT_RULE_CODE, _currentRuleCode );
+        model.put( MARK_MEDIATION_IDENTITY_LIST, mediationIdentities );
 
         return getPage( PROPERTY_PAGE_TITLE_SEARCH_DUPLICATES, TEMPLATE_SEARCH_DUPLICATES, model );
     }
@@ -832,6 +837,48 @@ public class IdentityDuplicateJspBean extends MVCAdminJspBean
         author.setName( getUser( ).getEmail( ) );
         author.setType( AuthorType.application );
         return author;
+    }
+
+    /**
+     * Fetches and processes a list of Mediation Identities based on a list of IdentityDto objects.
+     *
+     * @param identities The list of IdentityDto objects to process.
+     * @return A List of MediationIdentity objects containing information about potential duplicates.
+     * @throws IdentityStoreException if there is an issue with the identity store.
+     */
+    private List<MediationIdentity> fetchMediationIdentities(List<IdentityDto> identities) throws IdentityStoreException {
+        List<MediationIdentity> listIdentityToMerge = new ArrayList<>();
+    
+        List<IdentityDto> identitiesCopy = new ArrayList<>(identities);
+        for (IdentityDto suspiciousIdentity : identitiesCopy) {
+            List<IdentityDto> duplicateList = new ArrayList<>(fetchPotentialDuplicates(suspiciousIdentity));
+    
+            duplicateList.add(suspiciousIdentity);
+            duplicateList.sort(Comparator.comparing(o -> o.getQuality().getQuality(), Comparator.reverseOrder()));
+            IdentityDto bestIdentity = duplicateList.get(0);
+
+            MediationIdentity mediationIdentity = new MediationIdentity();
+            mediationIdentity.setSuspiciousIdentity(suspiciousIdentity);
+            mediationIdentity.setBestIdentity(bestIdentity);
+            mediationIdentity.setDuplicatesToMergeAttributes(new HashMap<>());
+    
+            for (IdentityDto duplicate : duplicateList) {
+                if (duplicate.equals(bestIdentity)) continue;
+    
+                List<String> attrToMergeList = mediationIdentity.getDuplicatesToMergeAttributes().computeIfAbsent(duplicate, k -> new ArrayList<>());
+                for (AttributeDto attrToKeep : bestIdentity.getAttributes()) {
+                    for (AttributeDto attrToMerge : duplicate.getAttributes()) {
+                        if (attrToKeep.getKey().equals(attrToMerge.getKey()) && attrToKeep.getCertificationLevel() < attrToMerge.getCertificationLevel()) {
+                            attrToMergeList.add(attrToKeep.getKey());
+                        }
+                    }
+                }
+            }
+    
+            listIdentityToMerge.add(mediationIdentity);
+        }
+    
+        return listIdentityToMerge;
     }
 
 }

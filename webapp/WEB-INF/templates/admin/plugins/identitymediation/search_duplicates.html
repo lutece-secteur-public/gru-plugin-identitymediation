@@ -75,31 +75,51 @@
                 <@th>${readableAttr.name}</@th>
               </#if>
             </#list>
-            <@th>#i18n{portal.util.labelActions}</@th>
-          </@tr>
+            <@th>#i18n{identitymediation.search_duplicates.statusColumn}</@th>
+            <@th>#i18n{identitymediation.choose_duplicate_type.actionColumn}</@th>
+            </@tr>
           <@tableHeadBodySeparator />
-          <#if duplicate_holder_list?size gt 0>
-            <#list duplicate_holder_list as identity>
-              <@tr>
-                <#assign i=0 />
-                <#list service_contract.attributeDefinitions?filter(a -> a.attributeRight.readable) as readableAttr>
-                  <#list identity.attributes?filter(a -> a.key == readableAttr.keyName) as attr>
-                    <#if i lt 4>
-                      <#assign i=i+1 />
-                      <@td>
-                        ${attr.value}
-                      </@td>
-                    </#if>
-                  </#list>
-                </#list>
+          <#if mediation_identity_list?size gt 0>
+          <#list mediation_identity_list as mediation_identity>
+          <@tr>
+          <#assign i=0 />
+          <#list service_contract.attributeDefinitions?filter(a -> a.attributeRight.readable) as readableAttr>
+            <#list mediation_identity.bestIdentity.attributes?filter(a -> a.key == readableAttr.keyName) as attr>
+              <#if i lt 4>
+                <#assign i=i+1 />
                 <@td>
-                  <@aButton href='jsp/admin/plugins/identitymediation/IdentityDuplicate.jsp?view=selectIdentities&cuid=${identity.customerId}&rule-code=RG_GEN_SuspectDoublon_04' title='#i18n{identitymediation.duplicate.process}' hideTitle=['all'] buttonIcon='arrow-right' disabled=disabled/>
+                  ${attr.value}
                 </@td>
-              </@tr>
+              </#if>
             </#list>
+          </#list>
+          <@td>
+          <#if mediation_identity.duplicatesToMergeAttributes??>
+            <#assign duplicatesToMergeAttributesSize = mediation_identity.duplicatesToMergeAttributes?size />
+            <#if duplicatesToMergeAttributesSize gt 1>
+              <@tag color="primary" class="text-uppercase"><strong>${duplicatesToMergeAttributesSize}</strong> #i18n{identitymediation.search_duplicates.status.selection}</@tag>  
+              <#elseif  duplicatesToMergeAttributesSize == 1 >
+              <#assign firstKey = mediation_identity.duplicatesToMergeAttributes?keys[0]>
+              <#if firstKey.monParisActive >
+              <@tag color="warning" class="text-uppercase">#i18n{identitymediation.search_duplicates.status.notification}</@tag>
+              <#else>
+              <@tag color="warning" class="text-uppercase">#i18n{identitymediation.search_duplicates.status.merge}</@tag>
+              </#if>
+              <#else>
+              <@tag color="success" class="text-uppercase">#i18n{identitymediation.search_duplicates.status.empty}</@tag>
+            </#if>
+            </#if>
+        </@td>
+          <@td>
+          <#if duplicatesToMergeAttributesSize gt 0>
+            <@aButton href='jsp/admin/plugins/identitymediation/IdentityDuplicate.jsp?view=selectIdentities&cuid=${mediation_identity.suspiciousIdentity.customerId}&rule-code=${current_rule_code}' title='#i18n{identitymediation.duplicate.process}' hideTitle=['all'] buttonIcon='arrow-right' disabled=disabled/>
+          </#if>
+          </@td>
+        </@tr>
+          </#list>
           <#else>
             <@tr>
-              <@td colspan=5>
+              <@td colspan=6>
                 <@empty subtitle=" " />
               </@td>
             </@tr>
