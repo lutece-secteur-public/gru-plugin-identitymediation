@@ -45,6 +45,7 @@ import fr.paris.lutece.plugins.identitystore.v3.web.rs.dto.merge.IdentityMergeRe
 import fr.paris.lutece.plugins.identitystore.v3.web.rs.dto.merge.IdentityMergeResponse;
 import fr.paris.lutece.plugins.identitystore.v3.web.rs.dto.search.DuplicateSearchResponse;
 import fr.paris.lutece.plugins.identitystore.v3.web.rs.dto.search.IdentitySearchResponse;
+import fr.paris.lutece.plugins.identitystore.v3.web.rs.dto.search.SearchAttribute;
 import fr.paris.lutece.plugins.identitystore.v3.web.rs.util.Constants;
 import fr.paris.lutece.plugins.identitystore.v3.web.service.IdentityService;
 import fr.paris.lutece.plugins.identitystore.v3.web.service.ServiceContractService;
@@ -87,6 +88,7 @@ public class IdentityDuplicateJspBean extends MVCAdminJspBean
     private static final String MESSAGE_MERGE_DUPLICATES_ERROR = "identitymediation.message.merge_duplicates.error";
     private static final String MESSAGE_EXCLUDE_DUPLICATES_SUCCESS = "identitymediation.message.exclude_duplicates.success";
     private static final String MESSAGE_EXCLUDE_DUPLICATES_ERROR = "identitymediation.message.exclude_duplicates.error";
+    private static final String MESSAGE_FETCH_ERROR = "identitymediation.message.fetch.error";
 
     // Views
     private static final String VIEW_CHOOSE_DUPLICATE_TYPE = "chooseDuplicateType";
@@ -113,6 +115,9 @@ public class IdentityDuplicateJspBean extends MVCAdminJspBean
     private static final String PROPERTY_PAGE_TITLE_RESOLVE_DUPLICATES = "identitymediation.resolve_duplicates.pageTitle";
     private static final String PROPERTY_RULE_PRIORITY_MINIMUM = "identitymediation.rules.priority.minimum";
 
+    // Parameters
+    final String[] PARAMETERS_DUPLICATE_SEARCH = {Constants.PARAM_FIRST_NAME, Constants.PARAM_FAMILY_NAME, Constants.PARAM_BIRTH_DATE};
+
     // Markers
     private static final String MARK_DUPLICATE_RULE_LIST = "duplicate_rule_list";
     private static final String MARK_DUPLICATE_HOLDER_LIST = "duplicate_holder_list";
@@ -120,6 +125,7 @@ public class IdentityDuplicateJspBean extends MVCAdminJspBean
     private static final String MARK_IDENTITY_LIST = "identity_list";
     private static final String MARK_IDENTITY_TO_KEEP = "identity_to_keep";
     private static final String MARK_IDENTITY_TO_MERGE = "identity_to_merge";
+    private static final String MARK_CURRENT_RULE_CODE = "current_rule_code";
 
     // Beans
     private static final IdentityQualityService _serviceQuality = SpringContextService.getBean( "identityQualityService.rest.httpAccess" );
@@ -213,9 +219,11 @@ public class IdentityDuplicateJspBean extends MVCAdminJspBean
         }
         _currentRuleCode = ruleIdStr;
         final List<IdentityDto> identities = new ArrayList<>( );
+        final List<DuplicateRuleSummaryDto> duplicateRules = new ArrayList<>( );
         try
         {
-            identities.addAll( fetchPotentialDuplicateHolders( ) );
+            duplicateRules.addAll( fetchDuplicateRules( ) );
+            identities.addAll( fetchPotentialDuplicateHolders( request ) );
             if ( CollectionUtils.isEmpty( identities ) )
             {
                 addInfo( MESSAGE_FETCH_DUPLICATE_HOLDERS_NORESULT, getLocale( ) );
@@ -224,12 +232,17 @@ public class IdentityDuplicateJspBean extends MVCAdminJspBean
         catch( final IdentityStoreException e )
         {
             AppLogService.error( "Error while fetching potential identity duplicates.", e );
-            addError( MESSAGE_FETCH_DUPLICATE_HOLDERS_ERROR, getLocale( ) );
+            addError( MESSAGE_FETCH_ERROR, getLocale( ) );
         }
 
         final Map<String, Object> model = getModel( );
+        for (String searchKey : PARAMETERS_DUPLICATE_SEARCH) {
+            model.put(searchKey, request.getParameter(searchKey));
+        }
         model.put( MARK_DUPLICATE_HOLDER_LIST, identities );
         model.put( MARK_SERVICE_CONTRACT, _serviceContract );
+        model.put( MARK_DUPLICATE_RULE_LIST, duplicateRules );
+        model.put( MARK_CURRENT_RULE_CODE, _currentRuleCode );
 
         return getPage( PROPERTY_PAGE_TITLE_SEARCH_DUPLICATES, TEMPLATE_SEARCH_DUPLICATES, model );
     }
@@ -240,13 +253,32 @@ public class IdentityDuplicateJspBean extends MVCAdminJspBean
      * @return the list of identities
      * @throws IdentityStoreException
      */
-    private List<IdentityDto> fetchPotentialDuplicateHolders( ) throws IdentityStoreException
+    private List<IdentityDto> fetchPotentialDuplicateHolders( final HttpServletRequest request ) throws IdentityStoreException
     {
         final List<IdentityDto> identities = new ArrayList<>( );
-        SuspiciousIdentitySearchRequest request = new SuspiciousIdentitySearchRequest( );
-        request.setRuleCode( _currentRuleCode );
+        final ArrayList<SearchAttribute> searchAttributes = new ArrayList<>();
+
+        SuspiciousIdentitySearchRequest searchRequest = new SuspiciousIdentitySearchRequest( );
+        searchRequest.setRuleCode( _currentRuleCode );
+
+        
+        for (String searchKey : PARAMETERS_DUPLICATE_SEARCH) {
+            String value = request.getParameter( searchKey );
+            if (value != null && !value.isBlank()) {
+                SearchAttribute searchAttribute = new SearchAttribute();
+                searchAttribute.setKey(searchKey);
+                searchAttribute.setValue(value);
+                searchAttribute.setTreatmentType(AttributeTreatmentType.APPROXIMATED);
+                searchAttributes.add(searchAttribute);
+            }
+        }
+
+        if ( !searchAttributes.isEmpty( ) ) {
+            searchRequest.setAttributes(searchAttributes);
+        }
+
         // TODO : gérer la pagination
-        final SuspiciousIdentitySearchResponse response = _serviceQuality.getSuspiciousIdentities( request, _currentClientCode, 200, 1, 50 );
+        final SuspiciousIdentitySearchResponse response = _serviceQuality.getSuspiciousIdentities( searchRequest, _currentClientCode, 200, 1, 50 );
         if ( response != null && response.getStatus( ) != ResponseStatusType.FAILURE && response.getSuspiciousIdentities( ) != null )
         {
             for ( final SuspiciousIdentityDto suspiciousIdentity : response.getSuspiciousIdentities( ) )

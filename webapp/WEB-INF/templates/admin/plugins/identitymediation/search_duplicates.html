@@ -1,55 +1,111 @@
-<style>
-    #search-duplicates-table .rounded-pill {
-        text-transform: uppercase;
-    }
-</style>
-<form class="form-inline" action="jsp/admin/plugins/identitymediation/IdentityDuplicate.jsp">
-    <@rowBox>
-        <@boxHeader i18nTitleKey="identitymediation.search_duplicates.pageTitle">
-            <@headerButtons>
-            </@headerButtons>
-        </@boxHeader>
-         <@boxBody>
+<@pageContainer>
+  <@pageColumn width="25rem">
+    <@pageHeader title="#i18n{identitymediation.search_duplicates.pageTitle}">
+    </@pageHeader>
+    <hr>
+    <h2 class="fw-bolder mb-2 mt-4"><i class="ti ti-user-search"></i> #i18n{identitymediation.search_duplicates.searchTitle}</h2>
+    <@tform method='post' name='search_identity' action='jsp/admin/plugins/identitymediation/IdentityDuplicate.jsp?view_searchDuplicates&code=${current_rule_code}' id='identitySearch'
+      class='border-bottom pb-3 mt-4'>
+      <@formGroup labelKey='#i18n{identitymediation.search_duplicates.first_name}'
+        labelFor='first_name' hideLabel=['all'] rows=2>
+        <@input type='text' id='first_name' name='first_name'
+          value='${first_name!""}'
+          placeHolder='#i18n{identitymediation.search_duplicates.first_name}' size='' />
+      </@formGroup>
+      <@formGroup labelKey='#i18n{identitymediation.search_duplicates.family_name}'
+        labelFor='family_name' hideLabel=['all'] rows=2>
+        <@input type='text' id='family_name' name='family_name'
+          value='${family_name!""}'
+          placeHolder='#i18n{identitymediation.search_duplicates.family_name}' size='' />
+      </@formGroup>
+      <@formGroup labelKey='#i18n{identitymediation.search_duplicates.birthdate}'
+        labelFor='birthdate' hideLabel=['all'] rows=2>
+        <@input type='text' id='birthdate' name='birthdate'
+          value='${birthdate!""}'
+          placeHolder='#i18n{identitymediation.search_duplicates.birthdate}' size='' />
+      </@formGroup>
+      <@formGroup rows=2>
+        <@button type='submit' style='w-100' buttonIcon='search'
+          title='#i18n{portal.util.labelSearch}' color='primary'
+          size='' />
+      </@formGroup>
+    </@tform>
+    <h2 class="fw-bolder mb-2 mt-4"><i class="ti ti-filters"></i> #i18n{identitymediation.search_duplicates.rulesTitle}</h2>
+    <ul class="list-group mt-4">
+        <#list duplicate_rule_list as rule>
+          <a href="jsp/admin/plugins/identitymediation/IdentityDuplicate.jsp?view_searchDuplicates&code=${rule.code}" class="list-group-item list-group-item-action <#if rule.code == current_rule_code>bg-primary-subtle</#if>" id="${rule.code}">
+            <div class="d-flex justify-content-between align-items-center">
+              <span class="my-auto <#if rule.code == current_rule_code>fw-bolder</#if>">${rule.name}</span>
+              <div class="d-flex align-items-center">
+                <#if rule.duplicateCount?number gt 0>
+                  <@tag color="danger">${rule.duplicateCount}</@tag>
+                <#else>
+                  <@tag color="success">${rule.duplicateCount}</@tag>
+                </#if>
+              </div>
+            </div>
+          </a>
+        </#list>
+      </ul>      
+  </@pageColumn>
+  <@pageColumn flush=true class="">
+    <#list duplicate_rule_list as rule>
+      <#if rule.code == current_rule_code>
+        <div class="jumbotron jumbotron-fluid d-flex align-items-center justify-content-center text-center bg-secondary pb-4">
+          <div class="col-8 mt-5 mb-5">
+            <@tag color="primary" class="mb-3 px-3">${rule.name}</@tag>
+            <#assign title><strong>${rule.duplicateCount}</strong> <#if rule.duplicateCount?number gt 1>#i18n{identitymediation.choose_duplicate_type.pendingDuplicates}<#else>#i18n{identitymediation.choose_duplicate_type.pendingDuplicate}</#if></#assign>
+            <@pageHeader title=title description=rule.description>
+            </@pageHeader>
             <@messages infos=infos />
             <@messages errors=errors />
             <@messages warnings=warnings />
-
-            <#if service_contract??>
-                <@table id='search-duplicates-table'>
-                    <tr>
-                        <#assign i=0 />
-                        <#list service_contract.attributeDefinitions?filter(a -> a.attributeRight.readable) as readableAttr>
-                        	<#if i lt 4 >
-                                        <#assign i=i+1 />
-                            <th>${readableAttr.name}</th>
-                            	</#if>
-                        </#list>
-                        <th>#i18n{portal.util.labelActions}</th>
-                    </tr>
-                    <@tableHeadBodySeparator />
-                    <#list duplicate_holder_list as identity>
-                        <tr>
-                        	<#assign i=0 />
-                            <#list service_contract.attributeDefinitions?filter(a -> a.attributeRight.readable) as readableAttr>
-                                
-                                 <#list identity.attributes?filter(a -> a.key == readableAttr.keyName) as attr>
-                                    <#if i lt 4 >
-                                        <#assign i=i+1 />
-                                    	 <td>
-                                        <span class="${attr.key}-value">${attr.value}</span>
-                                        </td>
-                                    </#if>
-                                    
-                                 </#list>
-                                
-                            </#list>
-                            <td>
-                                <@aButton href='jsp/admin/plugins/identitymediation/IdentityDuplicate.jsp?view=selectIdentities&cuid=${identity.customerId}' title='#i18n{identitymediation.duplicate.process}' hideTitle=['all'] buttonIcon='arrow-right' />
-                            </td>
-                        </tr>
-                    </#list>
-                </@table>
-            </#if>
-        </@boxBody>
-    </@rowBox>
-</form>
+          </div>
+        </div>
+      </#if>
+    </#list>
+    <div class="container-fluid mt-5 px-5" style="margin-top:-54px !important;">
+      <#if service_contract??>
+        <@table headBody=true class="table-hover">
+          <@tr>
+            <#assign i=0 />
+            <#list service_contract.attributeDefinitions?filter(a -> a.attributeRight.readable) as readableAttr>
+              <#if i lt 4>
+                <#assign i=i+1 />
+                <@th>${readableAttr.name}</@th>
+              </#if>
+            </#list>
+            <@th>#i18n{portal.util.labelActions}</@th>
+          </@tr>
+          <@tableHeadBodySeparator />
+          <#if duplicate_holder_list?size gt 0>
+            <#list duplicate_holder_list as identity>
+              <@tr>
+                <#assign i=0 />
+                <#list service_contract.attributeDefinitions?filter(a -> a.attributeRight.readable) as readableAttr>
+                  <#list identity.attributes?filter(a -> a.key == readableAttr.keyName) as attr>
+                    <#if i lt 4>
+                      <#assign i=i+1 />
+                      <@td>
+                        ${attr.value}
+                      </@td>
+                    </#if>
+                  </#list>
+                </#list>
+                <@td>
+                  <@aButton href='jsp/admin/plugins/identitymediation/IdentityDuplicate.jsp?view=selectIdentities&cuid=${identity.customerId}&rule-code=RG_GEN_SuspectDoublon_04' title='#i18n{identitymediation.duplicate.process}' hideTitle=['all'] buttonIcon='arrow-right' disabled=disabled/>
+                </@td>
+              </@tr>
+            </#list>
+          <#else>
+            <@tr>
+              <@td colspan=5>
+                <@empty subtitle=" " />
+              </@td>
+            </@tr>
+          </#if>
+        </@table>
+      </#if>
+    </div>
+  </@pageColumn>
+</@pageContainer>
