@@ -1,9 +1,7 @@
 <@pageContainer>
-  <@pageColumn width="25rem">
-    <@pageHeader title="#i18n{identitymediation.search_duplicates.pageTitle}">
-    </@pageHeader>
-    <hr>
-    <h2 class="fw-bolder mb-2 mt-4"><i class="ti ti-user-search"></i> #i18n{identitymediation.search_duplicates.searchTitle}</h2>
+  <@pageColumn id="mediation-filter-menu"  width="25rem" responsiveMenuSize="xxl" responsiveMenuPlacement="start" title="#i18n{identitymediation.search_duplicates.pageTitle}">
+    <hr class="d-none d-xxl-block">
+    <h2 class="fw-bolder mb-2 mt-xxl-4"><i class="ti ti-user-search"></i> #i18n{identitymediation.search_duplicates.searchTitle}</h2>
     <@tform method='post' name='search_identity' action='jsp/admin/plugins/identitymediation/IdentityDuplicate.jsp?view_searchDuplicates&code=${current_rule_code}' id='identitySearch'
       class='border-bottom pb-3 mt-4'>
       <@formGroup labelKey='#i18n{identitymediation.search_duplicates.first_name}'
@@ -53,6 +51,7 @@
       <#if rule.code == current_rule_code>
         <div class="jumbotron jumbotron-fluid d-flex align-items-center justify-content-center text-center bg-secondary pb-4">
           <div class="col-8 mt-5 mb-5">
+            <@pageColumnBtn class="mb-3 position-absolute start-0 ms-5 mt-4 top-0" hideSize="xxl" title="#i18n{identitymediation.search_duplicates.pageTitle}" idPageColumn="mediation-filter-menu" />
             <@tag color="primary" class="mb-3 px-3">${rule.name}</@tag>
             <#assign title><strong>${rule.duplicateCount}</strong> <#if rule.duplicateCount?number gt 1>#i18n{identitymediation.choose_duplicate_type.pendingDuplicates}<#else>#i18n{identitymediation.choose_duplicate_type.pendingDuplicate}</#if></#assign>
             <@pageHeader title=title description=rule.description>
