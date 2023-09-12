@@ -295,10 +295,12 @@ public class IdentityDuplicateJspBean extends MVCAdminJspBean
         }
 
         // TODO : gérer la pagination
-        final SuspiciousIdentitySearchResponse response = _serviceQuality.getSuspiciousIdentities( searchRequest, _currentClientCode, 200, 1, 50 );
+        final SuspiciousIdentitySearchResponse response = _serviceQuality.getSuspiciousIdentities( searchRequest, _currentClientCode, 200, 1, 10 );
         if ( response != null && response.getStatus( ) != ResponseStatusType.FAILURE && response.getSuspiciousIdentities( ) != null )
         {
-            for ( final SuspiciousIdentityDto suspiciousIdentity : response.getSuspiciousIdentities( ) )
+            //limit to 10 results unitl getSuspiciousIdentities pagination is working;
+            List<SuspiciousIdentityDto> suspiciousIdentities = response.getSuspiciousIdentities( ).stream( ).limit( 10 ).collect( Collectors.toList( ) );
+            for ( final SuspiciousIdentityDto suspiciousIdentity : suspiciousIdentities )
             {
                 identities.add( getQualifiedIdentityFromCustomerId( suspiciousIdentity.getCustomerId( ) ) );
             }
