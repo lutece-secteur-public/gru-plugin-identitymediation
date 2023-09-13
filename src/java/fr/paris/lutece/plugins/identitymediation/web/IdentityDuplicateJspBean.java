@@ -159,7 +159,7 @@ public class IdentityDuplicateJspBean extends MVCAdminJspBean
      * @param request
      * @return
      */
-    @View( value = VIEW_CHOOSE_DUPLICATE_TYPE, defaultView = true )
+    @View( value = VIEW_CHOOSE_DUPLICATE_TYPE )
     public String getDuplicateTypes( final HttpServletRequest request )
     {
         _suspiciousIdentity = null;
@@ -216,17 +216,19 @@ public class IdentityDuplicateJspBean extends MVCAdminJspBean
      *            The Http request
      * @return the html code of the duplicate form
      */
-    @View( value = VIEW_SEARCH_DUPLICATES )
+    @View( value = VIEW_SEARCH_DUPLICATES, defaultView = true )
     public String getSearchDuplicates( final HttpServletRequest request )
     {
         _suspiciousIdentity = null;
+        initClientCode( request );
+        initServiceContract( _currentClientCode );
         final String ruleIdStr = request.getParameter( Constants.PARAM_RULE_CODE );
         if ( StringUtils.isBlank( ruleIdStr ) )
         {
-            addError( MESSAGE_CHOOSE_DUPLICATE_TYPE_ERROR, getLocale( ) );
-            return getDuplicateTypes( request );
+            _currentRuleCode = null;
+        } else {
+            _currentRuleCode = ruleIdStr;
         }
-        _currentRuleCode = ruleIdStr;
         final List<IdentityDto> identities = new ArrayList<>( );
         final List<DuplicateRuleSummaryDto> duplicateRules = new ArrayList<>( );
         final List<MediationIdentity> mediationIdentities = new ArrayList<>( );
@@ -235,8 +237,10 @@ public class IdentityDuplicateJspBean extends MVCAdminJspBean
         try
         {
             duplicateRules.addAll( fetchDuplicateRules( ) );
+            if( _currentRuleCode != null ) {
             identities.addAll( fetchPotentialDuplicateHolders( request ) );
             mediationIdentities.addAll( fetchMediationIdentities( identities ) );
+            }
             identityHistoryDateList.putAll( fetchItentityHistoryByDate( 30 ) );
 
             if ( CollectionUtils.isEmpty( identities ) )
@@ -919,8 +923,7 @@ public class IdentityDuplicateJspBean extends MVCAdminJspBean
         IdentityHistorySearchResponse response = _serviceIdentity.searchIdentityHistory(request, _currentClientCode);
         if (response != null && response.getStatus() != ResponseStatusType.FAILURE && response.getHistories() != null) {
             Map<String, IdentityDto> identityMap = new HashMap<>();
-    
-            for (IdentityHistory h : response.getHistories()) {
+            for (IdentityHistory h : response.getHistories( ) ) {
                 identityMap.putIfAbsent(h.getCustomerId(), getQualifiedIdentityFromCustomerId(h.getCustomerId()));
                 for (AttributeHistory ah : h.getAttributeHistories()) {
                     for (AttributeChange ac : ah.getAttributeChanges()) {
@@ -938,7 +941,6 @@ public class IdentityDuplicateJspBean extends MVCAdminJspBean
                 }
             }
         }
-    
         return groupedAttributes;
     }
 
