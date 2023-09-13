@@ -285,7 +285,7 @@ public class IdentityDuplicateJspBean extends MVCAdminJspBean
         
         for (String searchKey : PARAMETERS_DUPLICATE_SEARCH) {
             String value = request.getParameter( searchKey );
-            if (value != null && !value.isBlank()) {
+            if ( value != null && !StringUtils.isBlank( value ) ) {
                 SearchAttribute searchAttribute = new SearchAttribute();
                 searchAttribute.setKey(searchKey);
                 searchAttribute.setValue(value);
@@ -910,16 +910,17 @@ public class IdentityDuplicateJspBean extends MVCAdminJspBean
         long currentTime = new Date().getTime();
         long nDaysInMillis = nDaysFrom * 24 * 60 * 60 * 1000L;
         Map<Long, Map<IdentityDto, List<AttributeChange>>> groupedAttributes = new HashMap<>();
-    
+ 
         IdentityHistorySearchRequest request = new IdentityHistorySearchRequest();
         request.setClientCode(_currentClientCode);
         request.setNbDaysFrom(30);
         request.setIdentityChangeType(IdentityChangeType.CONSOLIDATED);
         if( _currentRuleCode != null ) {
-            request.setMetadata(Map.of(Constants.METADATA_DUPLICATE_RULE_CODE, _currentRuleCode));
+            Map<String, String> metadata = new HashMap<>();
+            metadata.put(Constants.METADATA_DUPLICATE_RULE_CODE, _currentRuleCode);
+            request.setMetadata(metadata);
         }
         request.setOrigin(buildAuthor());
-    
         IdentityHistorySearchResponse response = _serviceIdentity.searchIdentityHistory(request, _currentClientCode);
         if (response != null && response.getStatus() != ResponseStatus.failure( ) && response.getHistories() != null) {
             Map<String, IdentityDto> identityMap = new HashMap<>();
@@ -931,7 +932,6 @@ public class IdentityDuplicateJspBean extends MVCAdminJspBean
                         if (Math.abs(currentTime - modTime) <= nDaysInMillis) {
                             long key = (modTime / (1000 * 60)) * (1000 * 60);
                             IdentityDto idDto = identityMap.get(h.getCustomerId());
-    
                             groupedAttributes
                                     .computeIfAbsent(key, k -> new HashMap<>())
                                     .computeIfAbsent(idDto, k -> new ArrayList<>())
@@ -942,6 +942,6 @@ public class IdentityDuplicateJspBean extends MVCAdminJspBean
             }
         }
         return groupedAttributes;
-    }
+    }    
 
 }
