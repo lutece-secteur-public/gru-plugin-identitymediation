@@ -197,11 +197,11 @@ public class IdentityDuplicateJspBean extends MVCAdminJspBean
         {
             throw new IdentityStoreException( "DuplicateRuleSummarySearchResponse is null." );
         }
-        if ( response.getStatus( ) == ResponseStatusType.FAILURE )
+        if ( response.getStatus( ) == ResponseStatus.failure( ) )
         {
             throw new IdentityStoreException( "Status of DuplicateRuleSummarySearchResponse is FAILURE. Message = " + response.getStatus( ).getName( ) );
         }
-        if ( response.getStatus( ) == ResponseStatusType.NOT_FOUND || CollectionUtils.isEmpty( response.getDuplicateRuleSummaries( ) ) )
+        if ( response.getStatus( ) == ResponseStatus.notFound( ) || CollectionUtils.isEmpty( response.getDuplicateRuleSummaries( ) ) )
         {
             AppLogService.error( "No duplicate rules found." );
             addError( MESSAGE_FETCH_DUPLICATE_RULES_NORESULT, getLocale( ) );
@@ -300,7 +300,7 @@ public class IdentityDuplicateJspBean extends MVCAdminJspBean
 
         // TODO : gérer la pagination
         final SuspiciousIdentitySearchResponse response = _serviceQuality.getSuspiciousIdentities( searchRequest, _currentClientCode, 200, 1, 10 );
-        if ( response != null && response.getStatus( ) != ResponseStatusType.FAILURE && response.getSuspiciousIdentities( ) != null )
+        if ( response != null && response.getStatus( ) != ResponseStatus.failure( ) && response.getSuspiciousIdentities( ) != null )
         {
             //limit to 10 results unitl getSuspiciousIdentities pagination is working;
             List<SuspiciousIdentityDto> suspiciousIdentities = response.getSuspiciousIdentities( ).stream( ).limit( 10 ).collect( Collectors.toList( ) );
@@ -471,14 +471,14 @@ public class IdentityDuplicateJspBean extends MVCAdminJspBean
         {
             final IdentityMergeRequest identityMergeRequest = buildMergeRequest( request );
             final IdentityMergeResponse response = _serviceIdentity.mergeIdentities( identityMergeRequest, _currentClientCode );
-            if ( response.getStatus( ) == ResponseStatusType.FAILURE )
+            if ( response.getStatus( ) == ResponseStatus.failure( ) )
             {
             	addError( MESSAGE_MERGE_DUPLICATES_ERROR , getLocale( ) );
             	
             	// TODO : get i18n msg
-            	if ( response.getMessage( ) != null )
+            	if ( response.getStatus( ).getMessage( ) != null )
             	{
-            		addError( response.getMessage( ) );
+            		addError( response.getStatus( ).getMessage( ) );
             	}
                 _identityToKeep = null;
                 _identityToMerge = null;
@@ -535,10 +535,10 @@ public class IdentityDuplicateJspBean extends MVCAdminJspBean
         try
         {
             final SuspiciousIdentityExcludeResponse response = _serviceQuality.excludeIdentities( excludeRequest, _currentClientCode );
-            if ( response.getStatus( ) != ResponseStatusType.SUCCESS )
+            if ( response.getStatus( ) != ResponseStatus.success( ) )
             {
                 addError( MESSAGE_EXCLUDE_DUPLICATES_ERROR, getLocale( ) );
-                AppLogService.error( response.getMessage( ) );
+                AppLogService.error( response.getStatus( ).getMessage( ) );
                 _identityToKeep = null;
                 _identityToMerge = null;
                 return getDuplicateTypes( request );
@@ -606,9 +606,9 @@ public class IdentityDuplicateJspBean extends MVCAdminJspBean
         lockRequest.setCustomerId( suspiciousIdentity.getCustomerId( ) );
         lockRequest.setLocked( true );
         final SuspiciousIdentityLockResponse response = _serviceQuality.lockIdentity( lockRequest, _currentClientCode );
-        if ( !Objects.equals( ResponseStatusType.SUCCESS, response.getStatus( ) ) )
+        if ( !Objects.equals( ResponseStatus.success( ), response.getStatus( ) ) )
         {
-            throw new IdentityStoreException( response.getMessage( ) );
+            throw new IdentityStoreException( response.getStatus( ).getMessage( ) );
         }
     }
 
@@ -921,7 +921,7 @@ public class IdentityDuplicateJspBean extends MVCAdminJspBean
         request.setOrigin(buildAuthor());
     
         IdentityHistorySearchResponse response = _serviceIdentity.searchIdentityHistory(request, _currentClientCode);
-        if (response != null && response.getStatus() != ResponseStatusType.FAILURE && response.getHistories() != null) {
+        if (response != null && response.getStatus() != ResponseStatus.failure( ) && response.getHistories() != null) {
             Map<String, IdentityDto> identityMap = new HashMap<>();
             for (IdentityHistory h : response.getHistories( ) ) {
                 identityMap.putIfAbsent(h.getCustomerId(), getQualifiedIdentityFromCustomerId(h.getCustomerId()));
