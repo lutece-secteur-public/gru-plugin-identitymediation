@@ -196,7 +196,7 @@ public class IdentityDuplicateJspBean extends MVCAdminJspBean
         }
         if ( Objects.equals( response.getStatus( ), ResponseStatus.failure( ) ) )
         {
-            throw new IdentityStoreException( "Status of DuplicateRuleSummarySearchResponse is FAILURE. Message = " + response.getStatus( ).getName( ) );
+            throw new IdentityStoreException( "Status of DuplicateRuleSummarySearchResponse is FAILURE. Message = " + response.getStatus( ).getStatus( ).name() );
         }
         if ( Objects.equals( response.getStatus( ), ResponseStatus.notFound( ) ) || CollectionUtils.isEmpty( response.getDuplicateRuleSummaries( ) ) )
         {
