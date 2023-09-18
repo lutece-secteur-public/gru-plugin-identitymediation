@@ -39,7 +39,7 @@ import fr.paris.lutece.plugins.identitystore.v3.web.rs.dto.common.AuthorType;
 import fr.paris.lutece.plugins.identitystore.v3.web.rs.dto.common.IdentityDto;
 import fr.paris.lutece.plugins.identitystore.v3.web.rs.dto.common.QualityDefinition;
 import fr.paris.lutece.plugins.identitystore.v3.web.rs.dto.common.RequestAuthor;
-import fr.paris.lutece.plugins.identitystore.v3.web.rs.dto.common.ResponseStatus;
+import fr.paris.lutece.plugins.identitystore.v3.web.rs.dto.common.ResponseStatusType;
 import fr.paris.lutece.plugins.identitystore.v3.web.rs.dto.contract.ServiceContractDto;
 import fr.paris.lutece.plugins.identitystore.v3.web.rs.dto.crud.IdentityChangeRequest;
 import fr.paris.lutece.plugins.identitystore.v3.web.rs.dto.crud.SuspiciousIdentityDto;
@@ -194,12 +194,13 @@ public class IdentityDuplicateJspBean extends MVCAdminJspBean
         {
             throw new IdentityStoreException( "DuplicateRuleSummarySearchResponse is null." );
         }
-        if ( Objects.equals( response.getStatus( ), ResponseStatus.failure( ) ) )
+        if ( Objects.equals( response.getStatus( ).getStatus( ), ResponseStatusType.FAILURE ) )
         {
             throw new IdentityStoreException(
                     "Status of DuplicateRuleSummarySearchResponse is FAILURE. Message = " + response.getStatus( ).getStatus( ).name( ) );
         }
-        if ( Objects.equals( response.getStatus( ), ResponseStatus.notFound( ) ) || CollectionUtils.isEmpty( response.getDuplicateRuleSummaries( ) ) )
+        if ( Objects.equals( response.getStatus( ).getStatus( ), ResponseStatusType.NOT_FOUND )
+                || CollectionUtils.isEmpty( response.getDuplicateRuleSummaries( ) ) )
         {
             AppLogService.error( "No duplicate rules found." );
             addError( MESSAGE_FETCH_DUPLICATE_RULES_NORESULT, getLocale( ) );
@@ -258,7 +259,7 @@ public class IdentityDuplicateJspBean extends MVCAdminJspBean
         // TODO : exemple de pagination
         SuspiciousIdentitySearchResponse response = _serviceQuality.getSuspiciousIdentities( request, _currentClientCode );
         final List<SuspiciousIdentityDto> suspiciousIdentities = new ArrayList<>( );
-        while ( response != null && !Objects.equals( response.getStatus( ), ResponseStatus.failure( ) ) && response.getPagination( ) != null
+        while ( response != null && !Objects.equals( response.getStatus( ).getStatus( ), ResponseStatusType.FAILURE ) && response.getPagination( ) != null
                 && response.getPagination( ).getNextPage( ) != null )
         {
             suspiciousIdentities.addAll( response.getSuspiciousIdentities( ) );
@@ -437,7 +438,7 @@ public class IdentityDuplicateJspBean extends MVCAdminJspBean
         {
             final IdentityMergeRequest identityMergeRequest = buildMergeRequest( request );
             final IdentityMergeResponse response = _serviceIdentity.mergeIdentities( identityMergeRequest, _currentClientCode );
-            if ( Objects.equals( response.getStatus( ), ResponseStatus.failure( ) ) )
+            if ( Objects.equals( response.getStatus( ).getStatus( ), ResponseStatusType.FAILURE ) )
             {
                 addError( MESSAGE_MERGE_DUPLICATES_ERROR, getLocale( ) );
                 _identityToKeep = null;
@@ -495,7 +496,7 @@ public class IdentityDuplicateJspBean extends MVCAdminJspBean
         try
         {
             final SuspiciousIdentityExcludeResponse response = _serviceQuality.excludeIdentities( excludeRequest, _currentClientCode );
-            if ( !Objects.equals( response.getStatus( ), ResponseStatus.success( ) ) )
+            if ( !Objects.equals( response.getStatus( ).getStatus( ), ResponseStatusType.SUCCESS ) )
             {
                 addError( MESSAGE_EXCLUDE_DUPLICATES_ERROR, getLocale( ) );
                 AppLogService.error( response.getStatus( ).getMessage( ) );
@@ -566,7 +567,7 @@ public class IdentityDuplicateJspBean extends MVCAdminJspBean
         lockRequest.setCustomerId( suspiciousIdentity.getCustomerId( ) );
         lockRequest.setLocked( true );
         final SuspiciousIdentityLockResponse response = _serviceQuality.lockIdentity( lockRequest, _currentClientCode );
-        if ( !Objects.equals( ResponseStatus.success( ), response.getStatus( ) ) )
+        if ( !Objects.equals( response.getStatus( ).getStatus( ), ResponseStatusType.SUCCESS ) )
         {
             throw new IdentityStoreException( response.getStatus( ).getMessage( ) );
         }
