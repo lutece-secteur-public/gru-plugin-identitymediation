@@ -1,10 +1,22 @@
 <link href="css/admin/plugins/identitymediation/timeline.css" rel="stylesheet" />
+<#assign description>
+  <#if current_rule_code??>
+    <#list duplicate_rule_list as rule>
+      <#if rule.code == current_rule_code>
+        #i18n{identitymediation.search_history_ruleFilter} <strong>${rule.name}</strong>
+      </#if>
+    </#list>
+  <#else>
+    #i18n{identitymediation.search_history_ruleFilter.all}   
+  </#if>
+</#assign>
 <#if identity_history_date_list?size == 0>
   <@pageColumn flush=true center=true class=" bg-secondary ">
     <div class="jumbotron jumbotron-fluid text-center pb-4">
       <div class="col-7 mt-5 mb-3 card bg-secondary p-5 rounded-5 shadow-none" style="margin:0 auto">
-    <i class="ti ti-activity-heartbeat fs-1"></i>
-    <h1 class="mt-3">#i18n{identitymediation.search_history.noActivity}</h1>
+        <i class="ti ti-activity-heartbeat fs-1"></i>
+        <h1 class="mt-3">#i18n{identitymediation.search_history.noActivity}</h1>
+        ${description}
       </div>
     </div>
   </@pageColumn>
@@ -40,9 +52,9 @@
                   </h3>
                   <p class="m-0">#i18n{identitymediation.search_history.modify} <strong>${attributeChanges[0].authorName!"N/A"}</strong> - #i18n{identitymediation.search_history.type} : <strong>${attributeChanges[0].authorType!"N/A"}</strong></p>
                   <div class="mt-3 mb-0">
-                        <@tag color="success">
-                        <i class="ti ti-check"></i> Rapprochement
-                        </@tag>
+                    <@tag color="success">
+                      <i class="ti ti-check"></i> Rapprochement
+                    </@tag>
                     <#list attributeChanges as attributeChange>
                       <@tag color="primary">
                         <i class="ti ti-forms"></i> ${getName(attributeChange.attributeKey)}
