@@ -255,14 +255,25 @@ public class IdentityDuplicateJspBean extends MVCAdminJspBean
         final List<IdentityDto> identities = new ArrayList<>( );
         SuspiciousIdentitySearchRequest request = new SuspiciousIdentitySearchRequest( );
         request.setRuleCode( _currentRuleCode );
-        // TODO : gérer la pagination
-        final SuspiciousIdentitySearchResponse response = _serviceQuality.getSuspiciousIdentities( request, _currentClientCode, 200, 1, 50 );
-        if ( response != null && !Objects.equals( response.getStatus( ), ResponseStatus.failure( ) ) && response.getSuspiciousIdentities( ) != null )
+        // TODO : exemple de pagination
+        SuspiciousIdentitySearchResponse response = _serviceQuality.getSuspiciousIdentities( request, _currentClientCode );
+        final List<SuspiciousIdentityDto> suspiciousIdentities = new ArrayList<>( );
+        while ( response != null && !Objects.equals( response.getStatus( ), ResponseStatus.failure( ) ) && response.getPagination( ) != null
+                && response.getPagination( ).getNextPage( ) != null )
         {
-            for ( final SuspiciousIdentityDto suspiciousIdentity : response.getSuspiciousIdentities( ) )
-            {
-                identities.add( getQualifiedIdentityFromCustomerId( suspiciousIdentity.getCustomerId( ) ) );
-            }
+            suspiciousIdentities.addAll( response.getSuspiciousIdentities( ) );
+            request.setPage( response.getPagination( ).getNextPage( ) );
+            response = _serviceQuality.getSuspiciousIdentities( request, _currentClientCode );
+        }
+        if ( response != null )
+        { // get last page due to while definition
+            suspiciousIdentities.addAll( response.getSuspiciousIdentities( ) );
+        }
+
+        // TODO: modifier l'API pour que ce soit fait côté serveur serait plus judicieux ?
+        for ( final SuspiciousIdentityDto suspiciousIdentity : suspiciousIdentities )
+        {
+            identities.add( getQualifiedIdentityFromCustomerId( suspiciousIdentity.getCustomerId( ) ) );
         }
         return identities;
     }
