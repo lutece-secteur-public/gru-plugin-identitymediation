@@ -232,7 +232,7 @@ public class IdentityDuplicateJspBean extends MVCAdminJspBean
         final List<IdentityDto> identities = new ArrayList<>( );
         final List<DuplicateRuleSummaryDto> duplicateRules = new ArrayList<>( );
         final List<MediationIdentity> mediationIdentities = new ArrayList<>( );
-        final Map<Long, Map<IdentityDto, List<AttributeChange>>> identityHistoryDateList = new HashMap<>( );
+        final Map<Long, Map<IdentityDto, List<AttributeChange>>> identityHistoryDateList = new TreeMap<>(Collections.reverseOrder());
 
         try
         {
