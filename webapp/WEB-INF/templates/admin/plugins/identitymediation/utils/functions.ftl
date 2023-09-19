@@ -1,3 +1,6 @@
+<#-- static files -->
+<link href="css/admin/plugins/identitymediation/mediation.css" rel="stylesheet" />
+
 <#-- 
   Retrieves the name associated with a given keyName in the list of attribute definitions.
   @param keyName                  The keyName for which to find the corresponding name.
