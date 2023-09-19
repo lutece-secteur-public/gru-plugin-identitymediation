@@ -98,10 +98,8 @@
     });
     if (selectedItem) {
         setTimeout(function() {
-            selectedItem.scrollIntoView({
-                behavior: 'smooth',
-                block: 'center'
-            });
+            const ulElement = document.getElementById("duplicate-list");
+            ulElement.scrollTop = selectedItem.offsetTop - (ulElement.clientHeight / 2) + (selectedItem.clientHeight / 2);
         }, 100);
     }
 </#noparse>
