@@ -189,7 +189,7 @@ public class IdentityDuplicateJspBean extends MVCAdminJspBean
 
     private List<DuplicateRuleSummaryDto> fetchDuplicateRules( ) throws IdentityStoreException
     {
-        final DuplicateRuleSummarySearchResponse response = _serviceQuality.getAllDuplicateRules( _currentClientCode, _rulePriorityMin );
+        final DuplicateRuleSummarySearchResponse response = _serviceQuality.getAllDuplicateRules( _currentClientCode, buildAuthor( ), _rulePriorityMin );
         if ( response == null )
         {
             throw new IdentityStoreException( "DuplicateRuleSummarySearchResponse is null." );
@@ -257,14 +257,14 @@ public class IdentityDuplicateJspBean extends MVCAdminJspBean
         SuspiciousIdentitySearchRequest request = new SuspiciousIdentitySearchRequest( );
         request.setRuleCode( _currentRuleCode );
         // TODO : exemple de pagination
-        SuspiciousIdentitySearchResponse response = _serviceQuality.getSuspiciousIdentities( request, _currentClientCode );
+        SuspiciousIdentitySearchResponse response = _serviceQuality.getSuspiciousIdentities( request, _currentClientCode, this.buildAuthor( ) );
         final List<SuspiciousIdentityDto> suspiciousIdentities = new ArrayList<>( );
         while ( response != null && !Objects.equals( response.getStatus( ).getStatus( ), ResponseStatusType.FAILURE ) && response.getPagination( ) != null
                 && response.getPagination( ).getNextPage( ) != null )
         {
             suspiciousIdentities.addAll( response.getSuspiciousIdentities( ) );
             request.setPage( response.getPagination( ).getNextPage( ) );
-            response = _serviceQuality.getSuspiciousIdentities( request, _currentClientCode );
+            response = _serviceQuality.getSuspiciousIdentities( request, _currentClientCode, this.buildAuthor( ) );
         }
         if ( response != null )
         { // get last page due to while definition
@@ -437,7 +437,7 @@ public class IdentityDuplicateJspBean extends MVCAdminJspBean
         try
         {
             final IdentityMergeRequest identityMergeRequest = buildMergeRequest( request );
-            final IdentityMergeResponse response = _serviceIdentity.mergeIdentities( identityMergeRequest, _currentClientCode );
+            final IdentityMergeResponse response = _serviceIdentity.mergeIdentities( identityMergeRequest, _currentClientCode, this.buildAuthor( ) );
             if ( Objects.equals( response.getStatus( ).getStatus( ), ResponseStatusType.FAILURE ) )
             {
                 addError( MESSAGE_MERGE_DUPLICATES_ERROR, getLocale( ) );
@@ -490,12 +490,11 @@ public class IdentityDuplicateJspBean extends MVCAdminJspBean
         }
 
         final SuspiciousIdentityExcludeRequest excludeRequest = new SuspiciousIdentityExcludeRequest( );
-        excludeRequest.setOrigin( buildAuthor( ) );
         excludeRequest.setIdentityCuid1( _identityToKeep.getCustomerId( ) );
         excludeRequest.setIdentityCuid2( _identityToMerge.getCustomerId( ) );
         try
         {
-            final SuspiciousIdentityExcludeResponse response = _serviceQuality.excludeIdentities( excludeRequest, _currentClientCode );
+            final SuspiciousIdentityExcludeResponse response = _serviceQuality.excludeIdentities( excludeRequest, _currentClientCode, this.buildAuthor( ) );
             if ( !Objects.equals( response.getStatus( ).getStatus( ), ResponseStatusType.SUCCESS ) )
             {
                 addError( MESSAGE_EXCLUDE_DUPLICATES_ERROR, getLocale( ) );
@@ -563,10 +562,9 @@ public class IdentityDuplicateJspBean extends MVCAdminJspBean
     private void sendAcknowledgement( final IdentityDto suspiciousIdentity ) throws IdentityStoreException
     {
         final SuspiciousIdentityLockRequest lockRequest = new SuspiciousIdentityLockRequest( );
-        lockRequest.setOrigin( buildAuthor( ) );
         lockRequest.setCustomerId( suspiciousIdentity.getCustomerId( ) );
         lockRequest.setLocked( true );
-        final SuspiciousIdentityLockResponse response = _serviceQuality.lockIdentity( lockRequest, _currentClientCode );
+        final SuspiciousIdentityLockResponse response = _serviceQuality.lockIdentity( lockRequest, _currentClientCode, this.buildAuthor( ) );
         if ( !Objects.equals( response.getStatus( ).getStatus( ), ResponseStatusType.SUCCESS ) )
         {
             throw new IdentityStoreException( response.getStatus( ).getMessage( ) );
@@ -581,10 +579,9 @@ public class IdentityDuplicateJspBean extends MVCAdminJspBean
     private void releaseAcknowledgement( final IdentityDto suspiciousIdentity ) throws IdentityStoreException
     {
         final SuspiciousIdentityLockRequest lockRequest = new SuspiciousIdentityLockRequest( );
-        lockRequest.setOrigin( buildAuthor( ) );
         lockRequest.setCustomerId( suspiciousIdentity.getCustomerId( ) );
         lockRequest.setLocked( false );
-        _serviceQuality.lockIdentity( lockRequest, _currentClientCode );
+        _serviceQuality.lockIdentity( lockRequest, _currentClientCode, this.buildAuthor( ) );
     }
 
     /**
@@ -681,8 +678,8 @@ public class IdentityDuplicateJspBean extends MVCAdminJspBean
      */
     private List<IdentityDto> fetchPotentialDuplicates( final IdentityDto identity ) throws IdentityStoreException
     {
-        final DuplicateSearchResponse response = _serviceQuality.getDuplicates( identity.getCustomerId( ), _currentRuleCode, _currentClientCode, 30, null,
-                null );
+        final DuplicateSearchResponse response = _serviceQuality.getDuplicates( identity.getCustomerId( ), _currentRuleCode, _currentClientCode,
+                this.buildAuthor( ) );
         if ( response != null && response.getIdentities( ) != null && !response.getIdentities( ).isEmpty( ) )
         {
             return response.getIdentities( );
@@ -739,7 +736,7 @@ public class IdentityDuplicateJspBean extends MVCAdminJspBean
         {
             try
             {
-                _serviceContract = _serviceContractService.getActiveServiceContract( clientCode ).getServiceContract( );
+                _serviceContract = _serviceContractService.getActiveServiceContract( clientCode, _currentClientCode, buildAuthor( ) ).getServiceContract( );
                 sortServiceContractAttributes( _serviceContract );
                 filterServiceContractAttributes( _serviceContract );
             }
@@ -805,12 +802,7 @@ public class IdentityDuplicateJspBean extends MVCAdminJspBean
                     identity.getAttributes( ).add( attr );
                 } );
 
-        RequestAuthor author = new RequestAuthor( );
-        author.setName( getUser( ).getEmail( ) );
-        author.setType( AuthorType.application );
-
         changeRequest.setIdentity( identity );
-        changeRequest.setOrigin( author );
 
         return changeRequest;
     }
@@ -840,8 +832,6 @@ public class IdentityDuplicateJspBean extends MVCAdminJspBean
                 return attributeDto;
             } ).collect( Collectors.toList( ) ) );
         }
-
-        req.setOrigin( buildAuthor( ) );
 
         return req;
     }
