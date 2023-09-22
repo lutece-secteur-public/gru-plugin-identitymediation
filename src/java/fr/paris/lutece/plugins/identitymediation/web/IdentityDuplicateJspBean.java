@@ -194,12 +194,12 @@ public class IdentityDuplicateJspBean extends MVCAdminJspBean
         {
             throw new IdentityStoreException( "DuplicateRuleSummarySearchResponse is null." );
         }
-        if ( Objects.equals( response.getStatus( ).getStatus( ), ResponseStatusType.FAILURE ) )
+        if ( Objects.equals( response.getStatus( ).getType( ), ResponseStatusType.FAILURE ) )
         {
             throw new IdentityStoreException(
-                    "Status of DuplicateRuleSummarySearchResponse is FAILURE. Message = " + response.getStatus( ).getStatus( ).name( ) );
+                    "Status of DuplicateRuleSummarySearchResponse is FAILURE. Message = " + response.getStatus( ).getType( ).name( ) );
         }
-        if ( Objects.equals( response.getStatus( ).getStatus( ), ResponseStatusType.NOT_FOUND )
+        if ( Objects.equals( response.getStatus( ).getType( ), ResponseStatusType.NOT_FOUND )
                 || CollectionUtils.isEmpty( response.getDuplicateRuleSummaries( ) ) )
         {
             AppLogService.error( "No duplicate rules found." );
@@ -259,7 +259,7 @@ public class IdentityDuplicateJspBean extends MVCAdminJspBean
         // TODO : exemple de pagination
         SuspiciousIdentitySearchResponse response = _serviceQuality.getSuspiciousIdentities( request, _currentClientCode, this.buildAuthor( ) );
         final List<SuspiciousIdentityDto> suspiciousIdentities = new ArrayList<>( );
-        while ( response != null && !Objects.equals( response.getStatus( ).getStatus( ), ResponseStatusType.FAILURE ) && response.getPagination( ) != null
+        while ( response != null && !Objects.equals( response.getStatus( ).getType( ), ResponseStatusType.FAILURE ) && response.getPagination( ) != null
                 && response.getPagination( ).getNextPage( ) != null )
         {
             suspiciousIdentities.addAll( response.getSuspiciousIdentities( ) );
@@ -438,7 +438,7 @@ public class IdentityDuplicateJspBean extends MVCAdminJspBean
         {
             final IdentityMergeRequest identityMergeRequest = buildMergeRequest( request );
             final IdentityMergeResponse response = _serviceIdentity.mergeIdentities( identityMergeRequest, _currentClientCode, this.buildAuthor( ) );
-            if ( Objects.equals( response.getStatus( ).getStatus( ), ResponseStatusType.FAILURE ) )
+            if ( Objects.equals( response.getStatus( ).getType( ), ResponseStatusType.FAILURE ) )
             {
                 addError( MESSAGE_MERGE_DUPLICATES_ERROR, getLocale( ) );
                 _identityToKeep = null;
@@ -495,7 +495,7 @@ public class IdentityDuplicateJspBean extends MVCAdminJspBean
         try
         {
             final SuspiciousIdentityExcludeResponse response = _serviceQuality.excludeIdentities( excludeRequest, _currentClientCode, this.buildAuthor( ) );
-            if ( !Objects.equals( response.getStatus( ).getStatus( ), ResponseStatusType.SUCCESS ) )
+            if ( !Objects.equals( response.getStatus( ).getType( ), ResponseStatusType.SUCCESS ) )
             {
                 addError( MESSAGE_EXCLUDE_DUPLICATES_ERROR, getLocale( ) );
                 AppLogService.error( response.getStatus( ).getMessage( ) );
@@ -565,7 +565,7 @@ public class IdentityDuplicateJspBean extends MVCAdminJspBean
         lockRequest.setCustomerId( suspiciousIdentity.getCustomerId( ) );
         lockRequest.setLocked( true );
         final SuspiciousIdentityLockResponse response = _serviceQuality.lockIdentity( lockRequest, _currentClientCode, this.buildAuthor( ) );
-        if ( !Objects.equals( response.getStatus( ).getStatus( ), ResponseStatusType.SUCCESS ) )
+        if ( !Objects.equals( response.getStatus( ).getType( ), ResponseStatusType.SUCCESS ) )
         {
             throw new IdentityStoreException( response.getStatus( ).getMessage( ) );
         }
@@ -680,7 +680,7 @@ public class IdentityDuplicateJspBean extends MVCAdminJspBean
     {
         final DuplicateSearchResponse response = _serviceQuality.getDuplicates( identity.getCustomerId( ), _currentRuleCode, _currentClientCode,
                 this.buildAuthor( ) );
-        if ( response.getStatus().getStatus() == ResponseStatusType.OK && !response.getIdentities( ).isEmpty( ) )
+        if ( response.getStatus().getType() == ResponseStatusType.OK && !response.getIdentities( ).isEmpty( ) )
         {
             return response.getIdentities( );
         }
