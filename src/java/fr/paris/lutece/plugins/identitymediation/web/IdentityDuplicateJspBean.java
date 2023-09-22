@@ -680,7 +680,7 @@ public class IdentityDuplicateJspBean extends MVCAdminJspBean
     {
         final DuplicateSearchResponse response = _serviceQuality.getDuplicates( identity.getCustomerId( ), _currentRuleCode, _currentClientCode,
                 this.buildAuthor( ) );
-        if ( response.getStatus().getType() == ResponseStatusType.OK && !response.getIdentities( ).isEmpty( ) )
+        if ( response.getStatus( ).getType( ) == ResponseStatusType.OK && !response.getIdentities( ).isEmpty( ) )
         {
             return response.getIdentities( );
         }
