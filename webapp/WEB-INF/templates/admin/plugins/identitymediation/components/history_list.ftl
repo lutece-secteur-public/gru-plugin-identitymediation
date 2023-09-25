@@ -12,6 +12,9 @@
 </#assign>
 <#if identity_history_date_list?size == 0>
   <@pageColumn flush=true center=true class=" bg-secondary ">
+      <@messages infos=infos />
+      <@messages errors=errors />
+      <@messages warnings=warnings />
     <div class="jumbotron jumbotron-fluid text-center pb-4">
       <div class="col-7 mt-5 mb-3 card bg-secondary p-5 rounded-5 shadow-none" style="margin:0 auto">
         <i class="ti ti-activity-heartbeat fs-1"></i>
@@ -22,11 +25,14 @@
   </@pageColumn>
 <#else>
   <@pageColumn flush=true class=" bg-secondary ">
-    <div class="jumbotron jumbotron-fluid d-flex align-items-center justify-content-center text-center pb-4">
-      <div class="col-8 mt-5 mb-3">
+    <div class="jumbotron jumbotron-fluid d-flex align-items-center justify-content-center text-center pb-3">
+      <div class="col-8 mt-5">
         <#assign title><i class="ti ti-activity"></i> #i18n{identitymediation.search_history.pageTitle}</#assign>
         <@pageHeader title=title description=description>
         </@pageHeader>
+        <@messages infos=infos />
+        <@messages errors=errors />
+        <@messages warnings=warnings />
       </div>
     </div>
     <ul class="timeline">
@@ -52,17 +58,16 @@
                   </h3>
                   <p class="m-0">#i18n{identitymediation.search_history.modify} <strong>${attributeChanges[0].authorName!"N/A"}</strong> - #i18n{identitymediation.search_history.type} : <strong>${attributeChanges[0].authorType!"N/A"}</strong></p>
                   <div class="mt-3 mb-0">
-                    <@tag color="success">
+                    <@tag color="success" class="mt-1">
                       <i class="ti ti-check"></i> Rapprochement
                     </@tag>
                     <#list attributeChanges as attributeChange>
-                      <@tag color="primary">
+                      <@tag color="primary" class="mt-1">
                         <i class="ti ti-forms"></i> ${getName(attributeChange.attributeKey)}
                       </@tag>
                     </#list>
                   </div>
                 </div>
-                <button class="btn btn-primary ms-auto">#i18n{identitymediation.search_history.details}</button>
               </div>
             </div>
           </li>

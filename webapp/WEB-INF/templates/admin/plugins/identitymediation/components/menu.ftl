@@ -1,5 +1,24 @@
+<#--
+  Element: Menu
+
+  Displays the filtering menu for identity search and mediation.
+
+  The element produces a column featuring an accordion section that allows the user to filter 
+  potential duplicates based on different rules and to provide search criteria to refine the results.
+
+  @param first_name The first name to search for.
+  @param family_name The family name to search for.
+  @param birthdate The date of birth to search for.
+  @param current_rule_code The current rule code in context.
+  @param duplicate_rule_list The list of rules for finding duplicates.
+  
+  @returns A rendered column for identity mediation and search.
+  
+  Usage:
+    <@pageColumn ... />
+-->
 <#assign shouldOpenSearchAccordion = (first_name?has_content || family_name?has_content || birthdate?has_content)>
-<@pageColumn id="mediation-filter-menu" width="22rem" responsiveMenuSize="xxl" responsiveMenuPlacement="start"
+<@pageColumn id="mediation-filter-menu" width="22rem" responsiveMenuSize="xl" responsiveMenuPlacement="start"
     responsiveMenuTitle="#i18n{identitymediation.search_duplicates.pageTitle}" class=" pt-xl-4 px-md-4 ">
     <div class="">
         <h1 class="mb-0 py-2 pb-1">#i18n{identitymediation.search_duplicates.pageTitle}</h1>

@@ -1,240 +1,63 @@
-<style>
-    #resolve-duplicate-table th, #resolve-duplicate-table .rounded-pill, .override-attr-badge .rounded-pill {
-        text-transform: uppercase;
-    }
-    button.arrow-button, button.x-button {
-        min-height: 0;
-        max-height: 0;
-        max-width: 10px;
-    }
-    span.non-matching-value {
-        font-weight: bold;
-        color: red;
-    }
-    .override-attr-badge {
-        border: 1px solid black !important;
-    }
-</style>
-<script type="text/javascript">
-    $(function() {
-        let monParisBadgeCount = $('.mon-paris-badge').length;
-        if (monParisBadgeCount === 1) {
-            $('#swap-button').prop('disabled', true)
-                             .parent('span').prop('title', "#i18n{identitymediation.resolve_duplicates.noSwapTitle}");
-        } else if (monParisBadgeCount === 2) {
-            $('#swap-button').prop('disabled', true);
-            $('#merge-btn').hide();
-            $('#exclude-btn').hide();
-            $('#notify-btn').show();
-        }
-        $('span[id^="main-"]').each(function() {
-            let value = $(this).text().trim().toUpperCase();
-            if (value) {
-                let key = $(this).prop('id').replace('main-', '');
-                $('span.'+key+'-value').each(function() {
-                    if ($(this).text().trim().toUpperCase() !== value) {
-                        $(this).addClass('non-matching-value');
-                    }
-                });
-            }
-        });
-
-        $('button.arrow-button').click(function() {
-            let key = $(this).data('key');
-            let value = $(this).data('value');
-            let certif = $(this).data('certif');
-            let certifdate = $(this).data('certifdate');
-            let certiftimestamp = $(this).data('timestamp-certif');
-            $('input[name="override-' + key + '"]').val(value).prop("disabled", false);
-            $('input[name="override-' + key + '-certif"]').val(certif).prop("disabled", false);
-            $('input[name="override-' + key + '-timestamp-certif"]').val(certiftimestamp).prop("disabled", false);
-
-            // Hide all arrows on this line.
-            $(this).parents('tr').children('td').children('button.arrow-button').hide();
-
-            $('td#' + key + '-main-td').append($('<div id="override-' + key + '-badge" class="badge bg-success d-inline-flex override-attr-badge" />'));
-            $('div#override-' + key + '-badge').append($('<span/>').html(value))
-                                               .append($('<span class="badge rounded-pill mx-1"/>').html(certif))
-                                               .append($('<span class="certification-date"/>').html(certifdate))
-                                               // X button
-                                               .append($('<button class="btn btn-danger ms-1 x-button"/>').html('<i class="ti ti-x" aria-hidden="true"></i>').click(function(){
-                                                   $('input[name="override-' + key + '"]').val('').prop("disabled", true);
-                                                   $('input[name="override-' + key + '-certif"]').val('').prop("disabled", true);
-                                                   $('input[name="override-' + key + '-timestamp-certif"]').val('').prop("disabled", true);
-                                                   // Show the arrows again
-                                                   $(this).parents('tr').children('td').children('button.arrow-button').show();
-                                                   // Remove the fetched attribute value
-                                                   $('td#' + key + '-main-td').empty();
-                                               }));
-        });
-        $('#merge-btn').click(function () {
-            $('#recap-ul').empty().append($('<li></li>').text("#i18n{identitymediation.resolve_duplicates.mergeEntities}"));
-            let overrideList = $('div[id^=override-]');
-            if (overrideList.length) {
-                $('#recap-ul').append($('<li></li>').text("#i18n{identitymediation.resolve_duplicates.copyAttributes} :")
-                                                    .append($('<ul id="attr-recap-ul"></ul>')));
-                $(overrideList).each(function () {
-                    let label = $(this).parents('tr').children('td:first-child').text().trim();
-                    let attr = $(this).clone();
-                    attr.removeAttr('id').children('.x-button').remove();
-                    $('#attr-recap-ul').append($('<li></li>').text(label + ' : ').append(attr));
-                });
-            }
-        });
-    });
-</script>
-
 <#include "utils/functions.ftl" />
+<#include "components/identity_card.ftl" />
+<#include "components/merge_modals.ftl" />
+<#include "components/identity_merge.ftl" />
 <@pageContainer id="mediation">
-  <#include "components/menu.ftl" />
-  <#if mediation_identity_list?size gt 0>
-    <#include "components/duplicate_list.ftl" />
-  </#if>
-<@pageColumn class=" bg-secondary ">
-
-
-
-<form class="form-inline" action="jsp/admin/plugins/identitymediation/IdentityDuplicate.jsp">
-    <@rowBox>
-        <@boxHeader i18nTitleKey="identitymediation.resolve_duplicates.title">
-            <@headerButtons>
-            </@headerButtons>
-        </@boxHeader>
-        <@boxBody>
+    <#include "components/menu.ftl" />
+    <#if mediation_identity_list?size gt 0>
+        <#include "components/duplicate_list.ftl" />
+    </#if>
+    <@pageColumn id="mediation-resolve" class="pt-xl-4 bg-secondary ">
+        <div class="container">
+            <@pageHeader title="#i18n{identitymediation.resolve_duplicates.pageTitle}">
+                <#if !identity_to_keep.monParisActive && !identity_to_merge.monParisActive>
+                    <button id="merge-btn" type="button" class="btn btn-primary" data-bs-toggle="modal"
+                            data-bs-target="#merge-modal">
+                        #i18n{identitymediation.resolve_duplicates.buttonMergeDuplicate}
+                    </button>
+                </#if>
+                <button id="exclude-btn" type="button" class="btn btn-primary" data-bs-toggle="modal"
+                        data-bs-target="#exclude-modal">
+                    #i18n{identitymediation.resolve_duplicates.buttonExcludeDuplicate}
+                </button>
+                <@aButton
+                        href="jsp/admin/plugins/identitymediation/IdentityDuplicate.jsp?action=cancel&cuid=${identity_to_keep.customerId}&code=${current_rule_code}&page=${current_page}"
+                        class="btn btn-danger" title="#i18n{identitymediation.resolve_duplicates.buttonCancel}"
+                        buttonIcon="x" title="Annuler" />
+            </@pageHeader>
             <@messages infos=infos />
             <@messages errors=errors />
             <@messages warnings=warnings />
-
             <#if service_contract??>
-                <@table id="resolve-duplicate-table">
-                    <tr>
-                        <th style="width: 400px;">&nbsp;</th>
-                        <th style="width: 500px;">
-                            <div class="col-12">#i18n{identitymediation.resolve_duplicates.identityToKeep}</div>
-                            <div class="col-12"><span class="quality-span">${identity_to_keep.quality.quality}</span> %</div>
-                            <#if identity_to_keep.monParisActive>
-                                <span class="badge bg-warning mon-paris-badge">MON PARIS</span>
-                            </#if>
-                        </th>
-                        <th style="width: 300px;">
-                            <span>
-                                <@button buttonIcon='arrows-left-right' id='swap-button' type='submit' name="action_swapIdentities"/>
-                            </span>
-                        </th>
-                        <th class="fw-normal">
-                            <div class="col-12">#i18n{identitymediation.resolve_duplicates.identityToMerge}</div>
-                            <div class="col-12"><span class="quality-span">${identity_to_merge.quality.quality}</span> %</div>
-                            <#if identity_to_merge.monParisActive>
-                                <span class="badge bg-warning mon-paris-badge">MON PARIS</span>
-                            </#if>
-                        </th>
-                    </tr>
-                    <@tableHeadBodySeparator />
-                    <#list service_contract.attributeDefinitions?filter(a -> a.attributeRight.readable) as readableAttr>
-                        <tr>
-                            <td>${readableAttr.name}</td>
-                            <input type="hidden" name="override-${readableAttr.keyName}" disabled>
-                            <input type="hidden" name="override-${readableAttr.keyName}-certif" disabled>
-                            <input type="hidden" name="override-${readableAttr.keyName}-timestamp-certif" disabled>
-                            <td id="${readableAttr.keyName}-main-td">
-                                <#list identity_to_keep.attributes?filter(a -> a.key == readableAttr.keyName) as attr>
-                                    <span id="main-${attr.key}" class="fw-bold">${attr.value}</span>
-                                    <#if attr.certifier??>
-                                        <span class="badge rounded-pill bg-info mx-1">${attr.certifier}</span>
-                                    </#if>
-                                    <#if attr.certificationDate??>
-                                        <span class="certification-date">${attr.certificationDate?date}</span>
-                                    </#if>
-                                </#list>
-                            </td>
-                            <td></td>
-                            <td>
-                                <#list identity_to_merge.attributes?filter(a -> a.key == readableAttr.keyName) as attr>
-                                    <#if identity_to_keep.attributes?filter(a -> a.key == readableAttr.keyName)?size == 1 && readableAttr.attributeRight.writable >
-                                        <@button class='arrow-button' buttonIcon='arrow-left' params='data-key="${attr.key}" data-value="${attr.value}" data-certif="${attr.certifier}" data-certifdate="${attr.certificationDate?date}" data-timestamp-certif="${attr.certificationDate?long}"' />
-                                    </#if>
-                                    <span class="${attr.key}-value">${attr.value}</span>
-                                    <#if attr.certifier??>
-                                        <span class="badge rounded-pill bg-info mx-1">${attr.certifier}</span>
-                                    </#if>
-                                    <#if attr.certificationDate??>
-                                        <span class="certification-date">${attr.certificationDate?date}</span>
-                                    </#if>
-                                </#list>
-                            </td>
-                        </tr>
+                <div id="lutece-compare" class="row mt-4 position-relative">
+                    <#list [identity_to_keep, identity_to_merge] as identity>
+                        <#if identity==identity_to_merge>
+                            <@identityMerge />
+                        </#if>
+                        <#if identity?is_last>
+                            <@identityCard identity=identity index=identity?index merge=true class="col-6 p-5 rounded-end-5"/>
+                        <#else>
+                            <@identityCard identity=identity index=identity?index merge=true class="col-6 p-5"/>
+                        </#if>
                     </#list>
-                </@table>
+                </div>
             </#if>
-        </@boxBody>
-    </@rowBox>
-    <@rowBox boxClass="action-box">
-        <@boxBody>
-            <button id="merge-btn" type="button" class="btn btn-warning" data-bs-toggle="modal" data-bs-target="#merge-modal" >
-                #i18n{identitymediation.resolve_duplicates.buttonMergeDuplicate}
-            </button>
-            <button id="exclude-btn" type="button" class="btn btn-warning" data-bs-toggle="modal" data-bs-target="#exclude-modal" >
-                #i18n{identitymediation.resolve_duplicates.buttonExcludeDuplicate}
-            </button>
-            <button id="notify-btn" type="button" class="btn btn-warning" data-bs-toggle="modal" data-bs-target="#notify-modal" style="display: none;">
-                #i18n{identitymediation.resolve_duplicates.buttonNotifyUsers}
-            </button>
-            <button class="btn btn-secondary" name="action_cancel" >
-                #i18n{identitymediation.resolve_duplicates.buttonCancel}
-            </button>
-        </@boxBody>
-    </@rowBox>
-    <div class="modal fade" id="merge-modal" tabindex="-1" aria-labelledby="mergeModalLabel" aria-hidden="true">
-        <div class="modal-dialog modal-lg">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title" id="mergeModalLabel">#i18n{identitymediation.resolve_duplicates.confirm}</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                </div>
-                <div class="modal-body">
-                    #i18n{identitymediation.resolve_duplicates.confirmMerge}
-                    <ul id="recap-ul"></ul>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">#i18n{identitymediation.resolve_duplicates.buttonCancel}</button>
-                    <button class="btn btn-primary" name="action_mergeDuplicate">#i18n{identitymediation.resolve_duplicates.buttonMergeDuplicate}</button>
-                </div>
-            </div>
         </div>
-    </div>
-    <div class="modal fade" id="exclude-modal" tabindex="-1" aria-labelledby="excludeModalLabel" aria-hidden="true">
-        <div class="modal-dialog">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title" id="excludeModalLabel">#i18n{identitymediation.resolve_duplicates.confirm}</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                </div>
-                <div class="modal-body">
-                    #i18n{identitymediation.resolve_duplicates.confirmExclude}
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">#i18n{identitymediation.resolve_duplicates.buttonCancel}</button>
-                    <button class="btn btn-primary" name="action_excludeDuplicate">#i18n{identitymediation.resolve_duplicates.buttonExcludeDuplicate}</button>
-                </div>
-            </div>
-        </div>
-    </div>
-    <div class="modal fade" id="notify-modal" tabindex="-1" aria-labelledby="notifyModalLabel" aria-hidden="true">
-        <div class="modal-dialog">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title" id="notifyModalLabel">#i18n{identitymediation.resolve_duplicates.confirm}</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                </div>
-                <div class="modal-body">
-                    Fonctionnalité non développée.
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">#i18n{identitymediation.resolve_duplicates.buttonCancel}</button>
-                </div>
-            </div>
-        </div>
-    </div>
-</form>
-</@pageColumn>
+        <@mergeModals />
+    </@pageColumn>
 </@pageContainer>
+<script type="module">
+    import MediationCompare from './js/admin/plugins/identitymediation/mediation-compare.js'
+    document.addEventListener('DOMContentLoaded', function () {
+        new MediationCompare(document.querySelector('#lutece-compare'), {
+            selection: false,
+            autoHeight: true,
+            hoverHighlight: true,
+            dragScroll: false,
+            tooltips: false,
+            currentPage: "${current_page}",
+            currentRuleCode: "${current_rule_code}",
+            merge: true
+        });
+    }); 
+</script>
