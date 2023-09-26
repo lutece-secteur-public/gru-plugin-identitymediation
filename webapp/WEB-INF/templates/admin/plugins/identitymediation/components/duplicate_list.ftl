@@ -4,8 +4,12 @@
       <#assign title><strong>${rule.duplicateCount}</strong> <#if rule.duplicateCount?number gt 1>#i18n{identitymediation.choose_duplicate_type.pendingDuplicates}<#else>#i18n{identitymediation.choose_duplicate_type.pendingDuplicate}</#if></#assign>
     </#if>
   </#list>
-  <@pageColumn width="25rem" flush=true responsiveMenuSize="xxl" responsiveMenuPlacement="start"
-      responsiveMenuTitle="#i18n{identitymediation.search_duplicates.pageTitle}" id="mediation-duplicate-list" class="  border-start-0 ">
+  <#assign isClosed = false />
+  <#if identity_list?? && identity_list?size gt 3>
+  <#assign isClosed = true />
+  </#if>
+  <@pageColumn width="25rem" flush=true responsiveMenuSize="xxl" responsiveMenuPlacement="end"
+      responsiveMenuTitle="#i18n{identitymediation.search_duplicates.pageTitle}" id="mediation-duplicate-list" class=" border-start-0" responsiveMenuClose=isClosed>
     <div class="border-bottom p-4 sticky-top">
     <h1 class="text-center mb-0 py-2 pb-1">${title!''}
     </h1>
@@ -88,20 +92,17 @@
     </nav>
   </@pageColumn>
   <script type="module">
-  const ruleCode = ${current_rule_code};
   const selectedItem = document.querySelector('#duplicate-list .selected');
   const paginationSelect = document.getElementById("paginationSelect");
-  <#noparse>
-    paginationSelect && paginationSelect.addEventListener("change", function() {
-        let selectedPage = this.value;
-        window.location.href = `jsp/admin/plugins/identitymediation/IdentityDuplicate.jsp?view_searchDuplicates&code=${ruleCode}&page=${selectedPage}`;
-    });
+   paginationSelect && paginationSelect.addEventListener("change", function() {
+      let selectedPage = this.value;
+      window.location.href = "jsp/admin/plugins/identitymediation/IdentityDuplicate.jsp?view_searchDuplicates&code=${current_rule_code}&page=" + selectedPage;
+  });
     if (selectedItem) {
         setTimeout(function() {
             const ulElement = document.getElementById("duplicate-list");
             ulElement.scrollTop = selectedItem.offsetTop - (ulElement.clientHeight / 2) + (selectedItem.clientHeight / 2);
         }, 100);
     }
-</#noparse>
 </script>
 </#if>

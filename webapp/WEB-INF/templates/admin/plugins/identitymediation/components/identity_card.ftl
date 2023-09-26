@@ -13,26 +13,26 @@
   <@identityCard identity=someIdentity index=someIndex />
 -->
 <#macro identityCard identity index merge=false class="" width="">
-    <div class="lutece-compare-item-container border-end p-3 <#if index=0>bg-primary-subtle border border-primary-subtle rounded-start-5<#else>border-dark-subtle border-top border-bottom</#if> ${class}" style="<#if width!=''>width:${width}</#if>">
+    <div class="lutece-compare-item-container border-end p-3 position-relative <#if index=0>bg-primary-subtle border border-primary-subtle rounded-start-5<#else> border-top border-bottom</#if><#if !merge && index!=0> border-dark-subtle<#elseif merge & index!=0> border-warning-subtle</#if> ${class}" style="<#if width!=''>width:${width}</#if>">
+        <#if merge>
+            <div class="position-absolute start-50 translate-middle-x d-flex justify-content-center" style="top: -10px;">
+              <#if index=0>
+                 <div class="badge text-primary-emphasis bg-primary-subtle border border-primary rounded-5 px-2 py-1 mb-1 d-inline-block text-nowrap">
+                        <i class="ti ti-check"></i> #i18n{identitymediation.resolve_duplicates.identityToKeep}
+                    </div>
+                <#else>
+                  <div class="badge text-warning-emphasis bg-warning-subtle border border-warning rounded-5 px-2 py-1 mb-1 d-inline-block text-nowrap">
+                        <i class="ti ti-arrow-badge-left"></i> #i18n{identitymediation.resolve_duplicates.identityToMerge}
+                    </div>
+                </#if>
+            </div>
+        </#if>
         <div class="lutece-compare-item card p-0 rounded-5 shadow-xl mb-0">
-
             <#if index=0 && !merge>
                 <button class="border btn btn-primary btn-rounded float-end pin position-absolute end-0 top-0 mt-2 me-2"><i class="ti fs-6 ti-pin-filled"></i></button>
             <#elseif !merge>
                 <a class="border btn btn-light btn-rounded float-end pin position-absolute end-0 top-0 mt-2 me-2" href="jsp/admin/plugins/identitymediation/IdentityDuplicate.jsp?view=selectIdentities&cuid=${suspicious_identity.customerId}&code=${current_rule_code}&page=${current_page}&cuid_pinned=${identity.customerId}"><i class="ti fs-6 ti-pin"></i></a>
             </#if>
-            <div class="position-absolute start-50 translate-middle-x d-flex justify-content-center" style="top: -10px;">
-                <#if identity = suspicious_identity>
-                    <div class="badge bg-light-subtle border text-body rounded-5  px-2 py-1 mb-1 d-inline-block me-2 text-nowrap d-none">
-                        #i18n{identitymediation.select_identities.suspicious}
-                    </div>
-                </#if>
-                <#if index = 0 >
-                    <div class="badge text-success-emphasis bg-success-subtle border rounded-5 px-2 py-1 mb-1 d-inline-block text-nowrap d-none">
-                        #i18n{identitymediation.select_identities.bestQuality}
-                    </div>
-                </#if>
-            </div>
             <div class="py-4 text-center">
                 <h2>#i18n{identitymediation.select_identities.identity} ${index + 1}</h2>
                 <div class="d-flex flex-row justify-content-center align-items-center mt-2 mb-3">

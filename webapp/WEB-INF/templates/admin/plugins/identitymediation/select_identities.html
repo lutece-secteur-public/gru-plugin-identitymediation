@@ -6,7 +6,13 @@
         <#include "components/duplicate_list.ftl" />
     </#if>
     <@pageColumn id="mediation-selection" class="pt-xl-4 bg-secondary ">
-        <@pageHeader title="#i18n{identitymediation.select_identities.pageTitle}" />
+        <@pageHeader title="#i18n{identitymediation.select_identities.pageTitle}">
+            <#if identity_list?? && identity_list?size gt 3>
+                <@pageColumnBtn title="#i18n{identitymediation.search_duplicates.pageTitle}" idPageColumn="mediation-duplicate-list" />
+            <#else>
+                <@pageColumnBtn class="mb-3" hideSize="xxl" title="#i18n{identitymediation.search_duplicates.pageTitle}" idPageColumn="mediation-duplicate-list" />
+            </#if>
+        </@pageHeader>
         <@messages infos=infos />
         <@messages errors=errors />
         <@messages warnings=warnings />
@@ -14,9 +20,9 @@
             <div id="lutece-compare" class="row flex-nowrap overflow-auto rounded-5 mt-3 pb-4 shadow">
                 <#list identity_list as identity>
                     <#if identity?is_last>
-                        <@identityCard identity=identity index=identity?index width="24rem" class="rounded-end-5" />
+                        <@identityCard identity=identity index=identity?index width="21.9rem" class="rounded-end-5" />
                     <#else>
-                        <@identityCard identity=identity index=identity?index width="24rem" />
+                        <@identityCard identity=identity index=identity?index width="21.9rem" />
                     </#if>
                 </#list>
             </div>

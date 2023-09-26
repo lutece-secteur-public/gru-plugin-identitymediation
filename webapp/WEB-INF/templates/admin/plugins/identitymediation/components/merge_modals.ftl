@@ -53,7 +53,7 @@
 						<button type="button" class="btn btn-rounded border position-absolute end-0 me-3 top-0 mt-3" data-bs-dismiss="modal" aria-label="Close">x</button>
 					</div>
 					<div class="modal-body text-center border-0 pt-0">
-						Fonctionnalité non développée.
+						Fonctionnalit&eacute; non d&eacute;velopp&eacute;e.
 					</div>
 					<div class="modal-footer justify-content-center pb-4 pt-0 border-0">
 						<button type="button" class="btn btn-secondary" data-bs-dismiss="modal">#i18n{identitymediation.resolve_duplicates.buttonCancel}</button>
