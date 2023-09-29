@@ -29,6 +29,7 @@
 					<input type="hidden" name="code" value="${current_rule_code}" />
 					<input type="hidden" name="page" value="${current_page}" />
 					<input type="hidden" name="cuid" value="${suspicious_identity.customerId}" />
+					<input type="hidden" name="cuid_to_exclude" value="${identity_to_merge.customerId}" />
 					<div class="modal-header border-0">
 						<h1 class="modal-title text-center w-100 p-4 pb-0" id="excludeModalLabel">#i18n{identitymediation.resolve_duplicates.confirm}</h1>
 						<button type="button" class="btn btn-rounded border position-absolute end-0 me-3 top-0 mt-3" data-bs-dismiss="modal" aria-label="Close">x</button>

@@ -3,7 +3,10 @@
   <#if current_rule_code??>
     <#list duplicate_rule_list as rule>
       <#if rule.code == current_rule_code>
-        #i18n{identitymediation.search_history_ruleFilter} <strong>${rule.name}</strong>
+        #i18n{identitymediation.search_history_ruleFilter} <strong>${rule.name}</strong><br>
+        <#if rule.duplicateCount gt 0>
+          <@pageColumnBtn class="mt-2" hideSize="xxl" title="${rule.duplicateCount} #i18n{identitymediation.search_duplicates.pageTitle}" idPageColumn="mediation-duplicate-list" />
+        </#if>
       </#if>
     </#list>
   <#else>
@@ -12,9 +15,12 @@
 </#assign>
 <#if identity_history_date_list?size == 0>
   <@pageColumn flush=true center=true class=" bg-secondary ">
-      <@messages infos=infos />
-      <@messages errors=errors />
-      <@messages warnings=warnings />
+    <#if identity_list?? && identity_list?size gt 0 >
+      <@pageColumnBtn class="mb-3" hideSize="xxl" title="#i18n{identitymediation.search_duplicates.pageTitle}" idPageColumn="mediation-duplicate-list" />
+    </#if>
+    <@messages infos=infos />
+    <@messages errors=errors />
+    <@messages warnings=warnings />
     <div class="jumbotron jumbotron-fluid text-center pb-4">
       <div class="col-7 mt-5 mb-3 card bg-secondary p-5 rounded-5 shadow-none" style="margin:0 auto">
         <i class="ti ti-activity-heartbeat fs-1"></i>
@@ -38,8 +44,8 @@
     <ul class="timeline">
       <#list identity_history_date_list as modificationDate, innerMap>
         <#list innerMap as identityDto, attributeChanges>
-        <#assign familyNameAttr = identityDto.attributes?filter(a -> a.key == "family_name")?first />
-        <#assign firstNameAttr = identityDto.attributes?filter(a -> a.key == "first_name")?first />
+          <#assign familyNameAttr = identityDto.attributes?filter(a -> a.key == "family_name")?first />
+          <#assign firstNameAttr = identityDto.attributes?filter(a -> a.key == "first_name")?first />
           <li>
             <div class="timeline-time">
               <span class="date">${(modificationDate?number_to_datetime)?string("d MMMM yyyy")}</span>

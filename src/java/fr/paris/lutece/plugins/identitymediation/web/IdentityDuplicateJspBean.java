@@ -130,6 +130,7 @@ public class IdentityDuplicateJspBean extends MVCAdminJspBean
     final String[] PARAMETERS_DUPLICATE_SEARCH = {Constants.PARAM_FIRST_NAME, Constants.PARAM_FAMILY_NAME, Constants.PARAM_BIRTH_DATE};
     final String PARAMETER_PAGE = "page";
     final String PARAMETER_CUID_PINNED = "cuid_pinned";
+    final String PARAMETER_CUID_TO_EXCLUDE = "cuid_to_exclude";
 
     // Markers
     private static final String MARK_DUPLICATE_RULE_LIST = "duplicate_rule_list";
@@ -262,8 +263,8 @@ public class IdentityDuplicateJspBean extends MVCAdminJspBean
                 return getSearchDuplicates( request );
             }
             identityList.addAll( duplicateList );
-            identityList.add( _suspiciousIdentity );
             sortByQuality( identityList );
+            identityList.add(0, _suspiciousIdentity);
         }
         catch( final IdentityStoreException e )
         {
@@ -470,17 +471,17 @@ public class IdentityDuplicateJspBean extends MVCAdminJspBean
     @Action( ACTION_EXCLUDE_DUPLICATE )
     public String doExcludeDuplicate( final HttpServletRequest request )
     {
-        if ( _identityToKeep == null || _identityToMerge == null || _identityToMerge.equals( _identityToKeep ) )
+        final String cuidToExclude = request.getParameter( PARAMETER_CUID_TO_EXCLUDE );
+
+        if ( cuidToExclude == null || _suspiciousIdentity == null )
         {
             addError( MESSAGE_EXCLUDE_DUPLICATES_ERROR, getLocale( ) );
-            _identityToKeep = null;
-            _identityToMerge = null;
             return getSelectIdentities( request );
         }
 
         final SuspiciousIdentityExcludeRequest excludeRequest = new SuspiciousIdentityExcludeRequest( );
-        excludeRequest.setIdentityCuid1( _identityToKeep.getCustomerId( ) );
-        excludeRequest.setIdentityCuid2( _identityToMerge.getCustomerId( ) );
+        excludeRequest.setIdentityCuid1( _suspiciousIdentity.getCustomerId( ) );
+        excludeRequest.setIdentityCuid2( cuidToExclude );
         try
         {
             final SuspiciousIdentityExcludeResponse response = _serviceQuality.excludeIdentities( excludeRequest, _currentClientCode, buildAgentAuthor( ) );
@@ -488,8 +489,6 @@ public class IdentityDuplicateJspBean extends MVCAdminJspBean
             {
                 addError( MESSAGE_EXCLUDE_DUPLICATES_ERROR, getLocale( ) );
                 AppLogService.error( response.getStatus( ).getMessage( ) );
-                _identityToKeep = null;
-                _identityToMerge = null;
                 return getSelectIdentities( request );
             }
         }
@@ -497,8 +496,6 @@ public class IdentityDuplicateJspBean extends MVCAdminJspBean
         {
             AppLogService.error( "Error while excluding the identities.", e );
             addError( MESSAGE_EXCLUDE_DUPLICATES_ERROR, getLocale( ) );
-            _identityToKeep = null;
-            _identityToMerge = null;
             return getSelectIdentities( request );
         }
 
@@ -512,9 +509,7 @@ public class IdentityDuplicateJspBean extends MVCAdminJspBean
             addError( e.getMessage( ) );
             return getSelectIdentities( request );
         }
-        _identityToKeep = null;
-        _identityToMerge = null;
-
+        init( request, true );
         addInfo( MESSAGE_EXCLUDE_DUPLICATES_SUCCESS, getLocale( ) );
         return getSelectIdentities( request );
     }

@@ -17,7 +17,7 @@
         <@messages errors=errors />
         <@messages warnings=warnings />
         <#if service_contract??>
-            <div id="lutece-compare" class="row flex-nowrap overflow-auto rounded-5 mt-3 pb-4 shadow">
+            <div id="lutece-compare" class="row flex-nowrap overflow-auto rounded-5 mt-3 pb-4 position-relative  mx-1">
                 <#list identity_list as identity>
                     <#if identity?is_last>
                         <@identityCard identity=identity index=identity?index width="21.9rem" class="rounded-end-5" />
@@ -33,14 +33,10 @@
     import MediationCompare from './js/admin/plugins/identitymediation/mediation-compare.js'
     document.addEventListener('DOMContentLoaded', function () {
         new MediationCompare(document.querySelector('#lutece-compare'), {
-            selection: true,
             autoHeight: true,
             hoverHighlight: true,
             dragScroll: true,
             tooltips: false,
-            currentPage: "${current_page}",
-            currentRuleCode: "${current_rule_code}",
-            currentSuspectCuid: "${suspicious_identity.customerId}",
         });
     });
 </script>

@@ -2,7 +2,6 @@
  * MediationCompare class.
  * 
  * This class provides functionalities for the mediation comparison UI. It offers features such as:
- * - Identity selection: Allows users to select identities and navigate to a merge page when two identities are selected.
  * - Syncing list group item heights: Ensures that list group items in different cards have consistent heights.
  * - Hover highlights: Highlights corresponding list group items in all cards when one is hovered over.
  * - Drag-scrolling: Enables users to click and drag to scroll horizontally within the container.
@@ -13,23 +12,16 @@
  * @class
  * @param {HTMLElement} container - The main container element for the mediation compare UI.
  * @param {Object} config - Configuration object for the class.
- * @param {boolean} config.selection - Flag to activate identity selection.
  * @param {boolean} config.autoHeight - Flag to sync list group item heights.
  * @param {boolean} config.hoverHighlight - Flag to activate hover highlights.
  * @param {boolean} config.dragScroll - Flag to activate drag scrolling.
  * @param {boolean} config.tooltips - Flag to activate tooltips.
- * @param {string} config.currentPage - The current page for navigation.
- * @param {string} config.currentRuleCode - The current rule code for navigation.
- * @param {string} config.currentSuspectCuid - The current suspect cuid for navigation.
  * @param {string} config.merge - Flag to merge capabilities.
  */
 export default class MediationCompare {
     constructor(container, config) {
         this.container = container;
-        this.selectIdentityBtns = this.container.querySelectorAll('button.select-identity-btn');
-        this.selectedIdentityBtns = this.container.querySelectorAll('button.selected-identity-btn');
         this.idendityCards = this.container.querySelectorAll('.card');
-        this.mergeForm = document.getElementById('mediation-merge-form')
         this.tooltip = null;
         this.config = config;
         this.init();
@@ -41,9 +33,6 @@ export default class MediationCompare {
      */
     init() {
         document.fonts.ready.then(() => {
-            if (this.config.selection) {
-                this.activateIdentitySelection();
-            }
             if (this.config.autoHeight) {
                 this.syncListGroupItemHeights();
             }
@@ -122,34 +111,6 @@ export default class MediationCompare {
                 });
             });
         }
-    }
-    /**
-     * Activates the identity selection feature.
-     * Allows users to select identities and navigate to a comparison page when two identities are selected.
-     * @private
-     */
-    activateIdentitySelection() {
-        this.selectedIdentityBtns.forEach(btn => btn.classList.add('d-none'));
-        this.selectIdentityBtns.forEach(btn => {
-            btn.addEventListener('click', () => {
-                btn.classList.add('d-none');
-                const siblingSelectedBtn = btn.parentElement.querySelector('.selected-identity-btn');
-                siblingSelectedBtn.classList.remove('d-none');
-                const selectedIdentityList = this.container.querySelectorAll('.selected-identity-btn:not(.d-none)');
-                if (selectedIdentityList.length === 2) {
-                    const identityCuid1 = selectedIdentityList[0].dataset;
-                    const identityCuid2 = selectedIdentityList[1].dataset;
-                    window.location.href = `jsp/admin/plugins/identitymediation/IdentityDuplicate.jsp?view_resolveDuplicates&${identityCuid1.name}=${identityCuid1.cuid}&${identityCuid2.name}=${identityCuid2.cuid}&cuid=${this.config.currentSuspectCuid}&code=${this.config.currentRuleCode}&page=${this.config.currentPage}`;
-                }
-            });
-        });
-        this.selectedIdentityBtns.forEach(btn => {
-            btn.addEventListener('click', () => {
-                btn.classList.add('d-none');
-                const siblingSelectBtn = btn.parentElement.querySelector('.select-identity-btn');
-                siblingSelectBtn.classList.remove('d-none');
-            });
-        });
     }
     /**
      * Synchronizes the heights of list group items across all cards.

@@ -22,10 +22,10 @@
             <#assign selectedClasses>bg-secondary-subtle shadow selected</#assign>
           </#if>
           <a href='jsp/admin/plugins/identitymediation/IdentityDuplicate.jsp?view=selectIdentities&cuid=${mediation_identity.suspiciousIdentity.customerId}&code=${current_rule_code}&page=${current_page}' class="list-group-item list-group-item-action px-4 py-3 ${selectedClasses}">
-              <#assign familyNameAttr = mediation_identity.bestIdentity.attributes?filter(a -> a.key == "family_name")?first!{}>
-              <#assign firstNameAttr = mediation_identity.bestIdentity.attributes?filter(a -> a.key == "first_name")?first!{}>
-              <#assign emailAttr = mediation_identity.bestIdentity.attributes?filter(a -> a.key == "email")?first!{}>
-              <#assign birthdateAttr = mediation_identity.bestIdentity.attributes?filter(a -> a.key == "birthdate")?first!{}>
+              <#assign familyNameAttr = mediation_identity.suspiciousIdentity.attributes?filter(a -> a.key == "family_name")?first!{}>
+              <#assign firstNameAttr = mediation_identity.suspiciousIdentity.attributes?filter(a -> a.key == "first_name")?first!{}>
+              <#assign emailAttr = mediation_identity.suspiciousIdentity.attributes?filter(a -> a.key == "email")?first!{}>
+              <#assign birthdateAttr = mediation_identity.suspiciousIdentity.attributes?filter(a -> a.key == "birthdate")?first!{}>
               <div class="d-flex w-100 justify-content-between">
                 <h3 class="mb-1 title mt-1 text-break fw-bold">
                   <#if familyNameAttr??>
