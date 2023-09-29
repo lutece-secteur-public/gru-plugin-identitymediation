@@ -22,6 +22,7 @@ export default class MediationCompare {
     constructor(container, config) {
         this.container = container;
         this.idendityCards = this.container.querySelectorAll('.card');
+        this.mergeForm = document.getElementById('mediation-merge-form')
         this.tooltip = null;
         this.config = config;
         this.init();
