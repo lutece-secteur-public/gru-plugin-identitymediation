@@ -68,4 +68,11 @@
         <jiraProjectName>IDENTITYMEDIATION</jiraProjectName>
         <jiraComponentId></jiraComponentId>
     </properties>
+
+    <scm>
+        <connection>scm:git:https://github.com/lutece-secteur-public/gru-plugin-identitymediation.git</connection>
+        <developerConnection>scm:git:https://github.com/lutece-secteur-public/gru-plugin-identitymediation.git</developerConnection>
+        <url>https://github.com/lutece-secteur-public/gru-plugin-identitymediation.git</url>
+    </scm>
+
 </project>
