@@ -88,7 +88,7 @@ import java.util.stream.Collectors;
 @Controller( controllerJsp = "IdentityDuplicate.jsp", controllerPath = "jsp/admin/plugins/identitymediation/", right = "IDENTITYMEDIATION_MANAGEMENT" )
 public class IdentityDuplicateJspBean extends MVCAdminJspBean
 {
-    private static final Logger _logger = Logger.getLogger(IdentityDuplicateJspBean.class);
+    private static final Logger _logger = Logger.getLogger( IdentityDuplicateJspBean.class );
     // Messages
     private static final String MESSAGE_CHOOSE_DUPLICATE_TYPE_ERROR = "identitymediation.message.choose_duplicate_type.error";
     private static final String MESSAGE_FETCH_DUPLICATE_RULES_ERROR = "identitymediation.message.fetch_duplicate_rules.error";
