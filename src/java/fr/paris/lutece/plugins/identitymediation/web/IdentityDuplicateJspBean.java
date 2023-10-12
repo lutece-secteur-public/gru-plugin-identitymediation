@@ -60,7 +60,6 @@ import fr.paris.lutece.plugins.identitystore.v3.web.service.IdentityService;
 import fr.paris.lutece.plugins.identitystore.v3.web.service.ServiceContractService;
 import fr.paris.lutece.plugins.identitystore.web.exception.IdentityStoreException;
 import fr.paris.lutece.portal.service.spring.SpringContextService;
-import fr.paris.lutece.portal.service.util.AppLogService;
 import fr.paris.lutece.portal.service.util.AppPropertiesService;
 import fr.paris.lutece.portal.util.mvc.admin.MVCAdminJspBean;
 import fr.paris.lutece.portal.util.mvc.admin.annotations.Controller;
@@ -68,6 +67,7 @@ import fr.paris.lutece.portal.util.mvc.commons.annotations.Action;
 import fr.paris.lutece.portal.util.mvc.commons.annotations.View;
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
+import org.apache.log4j.Logger;
 
 import javax.servlet.http.HttpServletRequest;
 import java.sql.Timestamp;
@@ -88,6 +88,7 @@ import java.util.stream.Collectors;
 @Controller( controllerJsp = "IdentityDuplicate.jsp", controllerPath = "jsp/admin/plugins/identitymediation/", right = "IDENTITYMEDIATION_MANAGEMENT" )
 public class IdentityDuplicateJspBean extends MVCAdminJspBean
 {
+    private static final Logger _logger = Logger.getLogger(IdentityDuplicateJspBean.class);
     // Messages
     private static final String MESSAGE_CHOOSE_DUPLICATE_TYPE_ERROR = "identitymediation.message.choose_duplicate_type.error";
     private static final String MESSAGE_FETCH_DUPLICATE_RULES_ERROR = "identitymediation.message.fetch_duplicate_rules.error";
@@ -176,7 +177,7 @@ public class IdentityDuplicateJspBean extends MVCAdminJspBean
         }
         catch( final IdentityStoreException e )
         {
-            AppLogService.error( "Error while fetching duplicate calculation rules.", e );
+            _logger.error( "Error while fetching duplicate calculation rules.", e );
             addError( MESSAGE_FETCH_DUPLICATE_RULES_ERROR, getLocale( ) );
         }
 
@@ -202,7 +203,7 @@ public class IdentityDuplicateJspBean extends MVCAdminJspBean
         if ( Objects.equals( response.getStatus( ).getType( ), ResponseStatusType.NOT_FOUND )
                 || CollectionUtils.isEmpty( response.getDuplicateRuleSummaries( ) ) )
         {
-            AppLogService.error( "No duplicate rules found." );
+            _logger.error( "No duplicate rules found." );
             addError( MESSAGE_FETCH_DUPLICATE_RULES_NORESULT, getLocale( ) );
         }
         return response.getDuplicateRuleSummaries( );
@@ -237,7 +238,7 @@ public class IdentityDuplicateJspBean extends MVCAdminJspBean
         }
         catch( final IdentityStoreException e )
         {
-            AppLogService.error( "Error while fetching potential identity duplicates.", e );
+            _logger.error( "Error while fetching potential identity duplicates.", e );
             addError( MESSAGE_FETCH_DUPLICATE_HOLDERS_ERROR, getLocale( ) );
         }
 
@@ -448,7 +449,7 @@ public class IdentityDuplicateJspBean extends MVCAdminJspBean
         }
         catch( final IdentityStoreException e )
         {
-            AppLogService.error( "Error while merging identities", e );
+            _logger.error( "Error while merging identities", e );
             addError( MESSAGE_MERGE_DUPLICATES_ERROR, getLocale( ) );
             _identityToKeep = null;
             _identityToMerge = null;
@@ -498,7 +499,7 @@ public class IdentityDuplicateJspBean extends MVCAdminJspBean
             if ( !Objects.equals( response.getStatus( ).getType( ), ResponseStatusType.SUCCESS ) )
             {
                 addError( MESSAGE_EXCLUDE_DUPLICATES_ERROR, getLocale( ) );
-                AppLogService.error( response.getStatus( ).getMessage( ) );
+                _logger.error( response.getStatus( ).getMessage( ) );
                 _identityToKeep = null;
                 _identityToMerge = null;
                 return getDuplicateTypes( request );
@@ -506,7 +507,7 @@ public class IdentityDuplicateJspBean extends MVCAdminJspBean
         }
         catch( final IdentityStoreException e )
         {
-            AppLogService.error( "Error while excluding the identities.", e );
+            _logger.error( "Error while excluding the identities.", e );
             addError( MESSAGE_EXCLUDE_DUPLICATES_ERROR, getLocale( ) );
             _identityToKeep = null;
             _identityToMerge = null;
@@ -742,7 +743,7 @@ public class IdentityDuplicateJspBean extends MVCAdminJspBean
             }
             catch( final Exception e )
             {
-                AppLogService.error( "Error while retrieving service contract [client code = " + clientCode + "].", e );
+                _logger.error( "Error while retrieving service contract [client code = " + clientCode + "].", e );
                 addError( MESSAGE_GET_SERVICE_CONTRACT_ERROR, getLocale( ) );
             }
         }
