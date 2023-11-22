@@ -26,6 +26,17 @@
             </#if>
         </div>
         <div class="lutece-compare-item card p-0 rounded-5 shadow-xl mb-0">
+            <#if !merge>
+                <#if index == 0>
+                    <button type="button" class="btn btn-warning" data-name="identity-cuid-${index}" data-cuid="${identity.customerId}">
+                        #i18n{identitymediation.select_identities.selectedIdentity}
+                    </button>
+                <#else>
+                    <button type="button" class="btn btn-dark" data-name="identity-cuid-${index}" data-cuid="${identity.customerId}" disabled>
+                        #i18n{identitymediation.select_identities.identityToProcess}
+                    </button>
+                </#if>
+            </#if>
             <div class="py-4 text-center">
                 <h3 class="px-2 text-truncate">
                 <#if familyNameAttr?? && familyNameAttr.value?? && familyNameAttr.value?has_content>
@@ -69,9 +80,7 @@
                             #i18n{identitymediation.select_identities.buttonExcludeDuplicate}  <i class="ti ti-arrow-big-right-filled"></i> 
                         </button>
                     <#else>
-                        <button type="button" class="btn btn-warning" data-name="identity-cuid-${index}" data-cuid="${identity.customerId}">
-                            #i18n{identitymediation.select_identities.suspiciousIdentity}
-                        </button>
+                        <button type="button" class="btn btn-light invisible" disabled>&nbsp;</button>
                     </#if>
                     </div>
                 </#if>
