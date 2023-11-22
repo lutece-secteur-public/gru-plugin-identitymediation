@@ -36,19 +36,16 @@ package fr.paris.lutece.plugins.identitymediation.cache;
 import fr.paris.lutece.plugins.identitystore.v3.web.rs.dto.contract.ServiceContractDto;
 import fr.paris.lutece.plugins.identitystore.web.exception.IdentityStoreException;
 import fr.paris.lutece.portal.service.cache.AbstractCacheableService;
+import fr.paris.lutece.portal.service.util.AppLogService;
 import fr.paris.lutece.portal.service.util.AppPropertiesService;
-import org.apache.log4j.Logger;
 
 import java.util.Arrays;
 import java.util.List;
 
 public class ServiceContractCache extends AbstractCacheableService
 {
-    private static final Logger LOGGER = Logger.getLogger( ServiceContractCache.class );
     private static final String SERVICE_NAME = "ServiceContractCache";
 
-    // private final ServiceContractService
-    // _serviceContractService = SpringContextService.getBean("serviceContract.rest.httpAccess");
     private final List<String> _sortedAttributeKeyList = Arrays.asList( AppPropertiesService.getProperty( "identitymediation.attribute.order" ).split( "," ) );
 
     public ServiceContractCache( )
@@ -63,7 +60,7 @@ public class ServiceContractCache extends AbstractCacheableService
             this.removeKey( clientCode );
         }
         this.putInCache( clientCode, serviceContract );
-        LOGGER.info( "ServiceContractDto added to cache: " + clientCode );
+        AppLogService.debug( "ServiceContractDto added to cache: " + clientCode );
     }
 
     public void remove( final String clientCode )
@@ -73,7 +70,7 @@ public class ServiceContractCache extends AbstractCacheableService
             this.removeKey( clientCode );
         }
 
-        LOGGER.info( "ServiceContractDto removed from cache: " + clientCode );
+        AppLogService.debug( "ServiceContractDto removed from cache: " + clientCode );
     }
 
     public ServiceContractDto get( final String clientCode ) throws IdentityStoreException
