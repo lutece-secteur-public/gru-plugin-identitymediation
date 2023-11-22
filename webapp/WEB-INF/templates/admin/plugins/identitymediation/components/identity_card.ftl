@@ -28,10 +28,10 @@
         <div class="lutece-compare-item card p-0 rounded-5 shadow-xl mb-0">
             <div class="py-4 text-center">
                 <h3 class="px-2 text-truncate">
-                <#if familyNameAttr??>
+                <#if familyNameAttr?? && familyNameAttr.value?? && familyNameAttr.value?has_content>
                     ${familyNameAttr.value}
                 </#if>
-                <#if firstNameAttr??>
+                <#if firstNameAttr?? && firstNameAttr.value?? && firstNameAttr.value?has_content>
                     ${firstNameAttr.value}
                 </#if>
                 </h3>
