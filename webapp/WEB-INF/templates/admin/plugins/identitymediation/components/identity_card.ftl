@@ -99,7 +99,19 @@
                                         <div class="fw-bold">
                                             <h3 class="mb-0 fw-bold">
                                                 <#if attr.value?? && attr.value?has_content>
-                                                    ${attr.value}
+                                                    <#if attr.key == 'gender'>
+                                                        <#if attr.value == '0'>
+                                                            #i18n{identitymediation.select_identities.undefined}
+                                                        <#elseif attr.value == '1'>
+                                                            #i18n{identitymediation.select_identities.female}
+                                                        <#elseif attr.value == '2'>
+                                                            #i18n{identitymediation.select_identities.male}
+                                                        <#else>
+                                                            ${attr.value}
+                                                        </#if>
+                                                    <#else>
+                                                        ${attr.value}
+                                                    </#if>
                                                 <#else>
                                                     <span class="text-warning">Vide</span>
                                                 </#if>
