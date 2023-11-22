@@ -695,9 +695,13 @@ public class IdentityDuplicateJspBean extends MVCAdminJspBean
             contract.getAttributeDefinitions( ).sort( ( a1, a2 ) -> {
                 final int index1 = _sortedAttributeKeyList.indexOf( a1.getKeyName( ) );
                 final int index2 = _sortedAttributeKeyList.indexOf( a2.getKeyName( ) );
-                final Integer i1 = index1 == -1 ? 999 : index1;
-                final Integer i2 = index2 == -1 ? 999 : index2;
-                return i1.compareTo( i2 );
+                final int i1 = index1 == -1 ? 999 : index1;
+                final int i2 = index2 == -1 ? 999 : index2;
+                if ( i1 == i2 )
+                {
+                    return a1.getKeyName( ).compareTo( a2.getKeyName( ) );
+                }
+                return Integer.compare( i1, i2 );
             } );
         }
     }
