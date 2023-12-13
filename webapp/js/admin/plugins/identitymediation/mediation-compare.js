@@ -61,19 +61,29 @@ export default class MediationCompare {
         const mergeBtns = this.container.querySelectorAll('.mediation-btn-merge');
         mergeBtns.forEach(btn => {
             btn.addEventListener('click', () => {
-                btn.style.transform = `rotate(${btn.style.transform === "rotate(180deg)" ? "0deg" : "180deg"})`;
+                let icon = btn.querySelector('i.ti');
                 let mediationLine = btn.closest('.list-group-item').querySelector('.mediation-line-merge');
-                if (btn.style.transform === "rotate(180deg)") {
+                let attrLineLeft = this.container.querySelector('.lutece-compare-item-container.rounded-start-5 li.list-group-item[data-key="' + btn.dataset.key + '"]');
+                let attrLineRight = this.container.querySelector('.lutece-compare-item-container.rounded-end-5 li.list-group-item[data-key="' + btn.dataset.key + '"]');
+                if (icon.classList.contains('ti-arrow-left')) {
                     btn.classList.add('bg-warning-subtle', 'text-warning-emphasis', 'border-warning');
                     btn.classList.remove('border-primary-subtle', 'btn-light');
+                    icon.classList.remove('ti-arrow-left');
+                    icon.classList.add('ti-x');
                     mediationLine.classList.add('border-warning-subtle');
                     mediationLine.classList.remove('border-primary-subtle');
+                    attrLineLeft.classList.add('text-decoration-line-through', 'opacity-25');
+                    attrLineRight.classList.add('bg-warning-subtle');
                     this.merge(btn);
                 } else {
                     btn.classList.remove('bg-warning-subtle', 'text-warning-emphasis');
                     btn.classList.add('border-primary-subtle', 'btn-light');
+                    icon.classList.remove('ti-x');
+                    icon.classList.add('ti-arrow-left');
                     mediationLine.classList.remove('border-warning-subtle');
                     mediationLine.classList.add('border-primary-subtle');
+                    attrLineLeft.classList.remove('text-decoration-line-through', 'opacity-25');
+                    attrLineRight.classList.remove('bg-warning-subtle');
                     this.merge(btn, false);
                 }
             });

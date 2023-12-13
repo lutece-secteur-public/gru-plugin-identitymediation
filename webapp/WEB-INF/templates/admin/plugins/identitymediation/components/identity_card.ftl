@@ -90,7 +90,7 @@
             </div>
             <ul class="list-group list-group-flush rounded-bottom-5">
                 <#list service_contract.attributeDefinitions?filter(a -> a.attributeRight.readable) as readableAttr>
-                    <li class="list-group-item d-flex justify-content-center align-items-center p-0 border-start-0 border-end-0" data-name="${readableAttr.name}" style="min-height:55px">
+                    <li class="list-group-item d-flex justify-content-center align-items-center p-0 border-start-0 border-end-0" data-name="${readableAttr.name}" data-key="${readableAttr.keyName}" style="min-height:55px">
                         <div class="w-100 d-flex">
                             <#assign attributesList=identity.attributes?filter(a -> a.key == readableAttr.keyName)>
                             <#if index != 0>
