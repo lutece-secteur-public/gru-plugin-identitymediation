@@ -116,10 +116,12 @@ export default class MediationCompare {
             });
         } else {
             inputNames.forEach((name) => {
-                const inputsToDelete = this.container.querySelectorAll(`input[name="${name}"].d-none`);
-                inputsToDelete.forEach(input => {
-                    this.mergeForm.removeChild(input);
-                });
+                const formChildren = Array.from(this.mergeForm.children);
+                for (let formChild of formChildren) {
+                    if (formChild.getAttribute("name") === name) {
+                        this.mergeForm.removeChild(formChild);
+                    }
+                }
             });
         }
     }
