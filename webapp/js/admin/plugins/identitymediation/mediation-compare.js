@@ -105,6 +105,7 @@ export default class MediationCompare {
             `override-${key}-certif`,
             `override-${key}-timestamp-certif`
         ];
+        const recapAttrList = document.getElementById('recap-attributes-merge-ul');
         if (isMerge) {
             inputNames.forEach((name, index) => {
                 const newInput = document.createElement('input');
@@ -114,6 +115,11 @@ export default class MediationCompare {
                 newInput.disabled = false;
                 this.mergeForm.appendChild(newInput);
             });
+            const recap = document.createElement('li');
+            recap.id = `recap-override-${key}`;
+            recap.innerHTML = `<b>${btn.dataset.name}</b> : ${value} (${certif} - ${btn.dataset.certifdate})`;
+            recapAttrList.appendChild(recap);
+            recapAttrList.parentElement.classList.remove('d-none');
         } else {
             inputNames.forEach((name) => {
                 const formChildren = Array.from(this.mergeForm.children);
@@ -123,6 +129,10 @@ export default class MediationCompare {
                     }
                 }
             });
+            recapAttrList.removeChild(document.getElementById(`recap-override-${key}`));
+            if (recapAttrList.childNodes.length === 0) {
+                recapAttrList.parentElement.classList.add('d-none');
+            }
         }
     }
     /**
