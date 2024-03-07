@@ -67,7 +67,7 @@ import fr.paris.lutece.plugins.identitystore.v3.web.rs.dto.search.DuplicateSearc
 import fr.paris.lutece.plugins.identitystore.v3.web.rs.dto.search.IdentitySearchResponse;
 import fr.paris.lutece.plugins.identitystore.v3.web.rs.dto.search.SearchAttribute;
 import fr.paris.lutece.plugins.identitystore.v3.web.rs.util.Constants;
-import fr.paris.lutece.plugins.identitystore.v3.web.service.IdentityService;
+import fr.paris.lutece.plugins.identitystore.v3.web.service.IdentityServiceExtended;
 import fr.paris.lutece.plugins.identitystore.v3.web.service.ServiceContractService;
 import fr.paris.lutece.plugins.identitystore.web.exception.IdentityStoreException;
 import fr.paris.lutece.portal.service.i18n.I18nService;
@@ -169,7 +169,7 @@ public class IdentityDuplicateJspBean extends MVCAdminJspBean
     // Beans
     private static final IdentityQualityService _serviceQuality = SpringContextService.getBean( "identityQualityService.rest.httpAccess" );
     private static final ServiceContractService _serviceContractService = SpringContextService.getBean( "serviceContract.rest.httpAccess" );
-    private static final IdentityService _serviceIdentity = SpringContextService.getBean( "identityService.rest.httpAccess" );
+    private static final IdentityServiceExtended _serviceIdentity = SpringContextService.getBean( "identityService.rest.httpAccess" );
 
     // Properties
     private final List<String> _sortedAttributeKeyList = Arrays.asList( AppPropertiesService.getProperty( "identitymediation.attribute.order" ).split( "," ) );

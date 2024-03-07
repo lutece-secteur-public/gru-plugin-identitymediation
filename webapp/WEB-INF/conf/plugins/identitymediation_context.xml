@@ -35,7 +35,7 @@
         <constructor-arg ref="restTransport.serviceContract.httpAccess"/>
     </bean>
     <!-- IdentityService impl -->
-    <bean id="identityService.rest.httpAccess" class="fr.paris.lutece.plugins.identitystore.v3.web.service.IdentityService">
+    <bean id="identityService.rest.httpAccess" class="fr.paris.lutece.plugins.identitystore.v3.web.service.IdentityServiceExtended">
         <constructor-arg ref="restTransport.identity.httpAccess"/>
     </bean>
 
