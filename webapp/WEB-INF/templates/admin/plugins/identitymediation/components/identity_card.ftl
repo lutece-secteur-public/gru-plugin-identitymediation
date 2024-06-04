@@ -8,7 +8,7 @@
   @param width Optional width for the card.
   @returns A rendered identity card based on provided parameters.
 -->
-<#macro identityCard identity index merge=false class="" width="">
+<#macro identityCard identity index family_name first_name birthdate merge=false class="" width="">
     <#if index == 0>
         <#assign firstIdentity = identity>
     </#if>
@@ -75,12 +75,12 @@
                 <#if !merge>
                     <div class="mt-3">
                     <#if index!=0>
-                        <a class="btn btn-outline-primary" href="jsp/admin/plugins/identitymediation/IdentityDuplicate.jsp?view_resolveDuplicates=&identity-cuid-1=${suspicious_identity.customerId}&identity-cuid-2=${identity.customerId}&cuid=${suspicious_identity.customerId}&code=${current_rule_code}&page=${current_page}">
+                        <a class="btn btn-outline-primary" href="jsp/admin/plugins/identitymediation/IdentityDuplicate.jsp?view_resolveDuplicates=&identity-cuid-1=${suspicious_identity.customerId}&identity-cuid-2=${identity.customerId}&cuid=${suspicious_identity.customerId}&code=${current_rule_code}&page=${current_page}&family_name=${family_name}&first_name=${first_name}&birthdate=${birthdate}">
                             <i class="ti ti-arrow-big-left-filled"></i> #i18n{identitymediation.select_identities.buttonMergeDuplicate}
                         </a>
                         <button type="button" class="btn btn-outline-danger" data-bs-toggle="modal"
                             data-bs-target="#exclude-modal-${identity.customerId}" >
-                            #i18n{identitymediation.select_identities.buttonExcludeDuplicate}  <i class="ti ti-arrow-big-right-filled"></i> 
+                            #i18n{identitymediation.select_identities.buttonExcludeDuplicate}  <i class="ti ti-arrow-big-right-filled"></i>
                         </button>
                     <#else>
                         <button type="button" class="btn btn-light invisible" disabled>&nbsp;</button>

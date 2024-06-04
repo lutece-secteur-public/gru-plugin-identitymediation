@@ -20,9 +20,9 @@
             <div id="lutece-compare" class="row flex-nowrap overflow-auto rounded-5 mt-3 pb-4 position-relative  mx-1">
                 <#list identity_list as identity>
                     <#if identity?is_last>
-                        <@identityCard identity=identity index=identity?index width="21.9rem" class="rounded-end-5" />
+                        <@identityCard identity=identity index=identity?index family_name=family_name!"" first_name=first_name!"" birthdate=birthdate!"" width="21.9rem" class="rounded-end-5" />
                     <#else>
-                        <@identityCard identity=identity index=identity?index width="21.9rem" />
+                        <@identityCard identity=identity index=identity?index family_name=family_name!"" first_name=first_name!"" birthdate=birthdate!"" width="21.9rem" />
                     </#if>
                 </#list>
             </div>

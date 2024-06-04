@@ -21,7 +21,7 @@
                         <i class="ti ti-x"></i> #i18n{identitymediation.resolve_duplicates.buttonExcludeDuplicate}
                 </button>
                 <@aButton
-                        href="jsp/admin/plugins/identitymediation/IdentityDuplicate.jsp?action=cancel&cuid=${identity_to_keep.customerId}&code=${current_rule_code}&page=${current_page}"
+                        href='jsp/admin/plugins/identitymediation/IdentityDuplicate.jsp?action=cancel&cuid=${identity_to_keep.customerId}&code=${current_rule_code}&page=${current_page}&family_name=${family_name!""}&first_name=${first_name!""}&birthdate=${birthdate!""}'
                         class="btn btn-danger" title="#i18n{identitymediation.resolve_duplicates.buttonCancel}"
                         buttonIcon="x" title="Annuler" />
             </@pageHeader>
@@ -43,9 +43,9 @@
                             <@identityMerge />
                         </#if>
                         <#if identity?is_last>
-                            <@identityCard identity=identity index=identity?index merge=true class="col-6 p-5 rounded-end-5"/>
+                            <@identityCard identity=identity index=identity?index family_name=family_name!"" first_name=first_name!"" birthdate=birthdate!"" merge=true class="col-6 p-5 rounded-end-5"/>
                         <#else>
-                            <@identityCard identity=identity index=identity?index merge=true class="col-6 p-5"/>
+                            <@identityCard identity=identity index=identity?index family_name=family_name!"" first_name=first_name!"" birthdate=birthdate!"" merge=true class="col-6 p-5"/>
                         </#if>
                     </#list>
                 </div>

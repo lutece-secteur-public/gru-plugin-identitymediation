@@ -35,30 +35,13 @@ package fr.paris.lutece.plugins.identitymediation.web;
 
 import fr.paris.lutece.plugins.identitymediation.buisness.MediationIdentity;
 import fr.paris.lutece.plugins.identityquality.v3.web.service.IdentityQualityService;
-import fr.paris.lutece.plugins.identitystore.v3.web.rs.dto.common.AttributeChangeStatusType;
-import fr.paris.lutece.plugins.identitystore.v3.web.rs.dto.common.AttributeDto;
-import fr.paris.lutece.plugins.identitystore.v3.web.rs.dto.common.AttributeTreatmentType;
-import fr.paris.lutece.plugins.identitystore.v3.web.rs.dto.common.AuthorType;
-import fr.paris.lutece.plugins.identitystore.v3.web.rs.dto.common.IdentityDto;
-import fr.paris.lutece.plugins.identitystore.v3.web.rs.dto.common.QualityDefinition;
-import fr.paris.lutece.plugins.identitystore.v3.web.rs.dto.common.RequestAuthor;
-import fr.paris.lutece.plugins.identitystore.v3.web.rs.dto.common.ResponseDto;
-import fr.paris.lutece.plugins.identitystore.v3.web.rs.dto.common.ResponseStatusType;
+import fr.paris.lutece.plugins.identitystore.v3.web.rs.dto.common.*;
 import fr.paris.lutece.plugins.identitystore.v3.web.rs.dto.contract.ServiceContractDto;
 import fr.paris.lutece.plugins.identitystore.v3.web.rs.dto.contract.ServiceContractSearchResponse;
-import fr.paris.lutece.plugins.identitystore.v3.web.rs.dto.crud.SuspiciousIdentityDto;
-import fr.paris.lutece.plugins.identitystore.v3.web.rs.dto.crud.SuspiciousIdentityExcludeRequest;
-import fr.paris.lutece.plugins.identitystore.v3.web.rs.dto.crud.SuspiciousIdentityExcludeResponse;
-import fr.paris.lutece.plugins.identitystore.v3.web.rs.dto.crud.SuspiciousIdentitySearchRequest;
-import fr.paris.lutece.plugins.identitystore.v3.web.rs.dto.crud.SuspiciousIdentitySearchResponse;
+import fr.paris.lutece.plugins.identitystore.v3.web.rs.dto.crud.*;
 import fr.paris.lutece.plugins.identitystore.v3.web.rs.dto.duplicate.DuplicateRuleSummaryDto;
 import fr.paris.lutece.plugins.identitystore.v3.web.rs.dto.duplicate.DuplicateRuleSummarySearchResponse;
-import fr.paris.lutece.plugins.identitystore.v3.web.rs.dto.history.AttributeChange;
-import fr.paris.lutece.plugins.identitystore.v3.web.rs.dto.history.AttributeHistory;
-import fr.paris.lutece.plugins.identitystore.v3.web.rs.dto.history.IdentityChangeType;
-import fr.paris.lutece.plugins.identitystore.v3.web.rs.dto.history.IdentityHistory;
-import fr.paris.lutece.plugins.identitystore.v3.web.rs.dto.history.IdentityHistorySearchRequest;
-import fr.paris.lutece.plugins.identitystore.v3.web.rs.dto.history.IdentityHistorySearchResponse;
+import fr.paris.lutece.plugins.identitystore.v3.web.rs.dto.history.*;
 import fr.paris.lutece.plugins.identitystore.v3.web.rs.dto.lock.SuspiciousIdentityLockRequest;
 import fr.paris.lutece.plugins.identitystore.v3.web.rs.dto.lock.SuspiciousIdentityLockResponse;
 import fr.paris.lutece.plugins.identitystore.v3.web.rs.dto.merge.IdentityMergeRequest;
@@ -83,16 +66,7 @@ import org.apache.commons.lang3.StringUtils;
 
 import javax.servlet.http.HttpServletRequest;
 import java.sql.Timestamp;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.Comparator;
-import java.util.Date;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
-import java.util.TreeMap;
+import java.util.*;
 import java.util.stream.Collectors;
 
 /**
@@ -165,6 +139,9 @@ public class IdentityDuplicateJspBean extends MVCAdminJspBean
     private static final String MARK_SUSPICIOUS_IDENTITY = "suspicious_identity";
     private static final String MARK_TOTAL_PAGES = "total_pages";
     private static final String MARK_CURRENT_PAGE = "current_page";
+    private static final String MARK_COUNT_DUPLICATE_BY_RULE = "count_duplicate_by_rule";
+    private static final String MARK_TOTAL_DUPLICATED = "count_total_duplicated";
+    private static final String MARK_RULE_BY_IDENTITY = "rule_by_identity";
 
     // Beans
     private static final IdentityQualityService _serviceQuality = SpringContextService.getBean( "identityQualityService.rest.httpAccess" );
@@ -190,6 +167,9 @@ public class IdentityDuplicateJspBean extends MVCAdminJspBean
     private Integer _currentPage;
     private RequestAuthor _agentAuthor;
     private RequestAuthor _applicationAuthor;
+    private Map<String, Integer> _totalRecordByRule;
+    private int _totalRecords = 0;
+    private Map<String, String> _ruleBySuspiciousIdentity;
 
     /**
      *
@@ -276,7 +256,7 @@ public class IdentityDuplicateJspBean extends MVCAdminJspBean
         final List<IdentityDto> identityList = new ArrayList<>( );
         try
         {
-            final List<IdentityDto> duplicateList = fetchPotentialDuplicates( _suspiciousIdentity );
+            final List<IdentityDto> duplicateList = fetchPotentialDuplicates( _suspiciousIdentity, _currentRuleCode );
             if ( CollectionUtils.isEmpty( duplicateList ) )
             {
                 return getSearchDuplicates( request );
@@ -305,6 +285,7 @@ public class IdentityDuplicateJspBean extends MVCAdminJspBean
 
         Map<String, Object> model = populateModel( );
         model.put( MARK_IDENTITY_LIST, identityList );
+        Arrays.asList( PARAMETERS_DUPLICATE_SEARCH ).forEach( searchKey -> model.put( searchKey, request.getParameter( searchKey ) ) );
 
         if ( identityList.size( ) == 2 )
         {
@@ -314,6 +295,7 @@ public class IdentityDuplicateJspBean extends MVCAdminJspBean
             cuidMap.put( "identity-cuid-2", identityList.get( 1 ).getCustomerId( ) );
             cuidMap.put( Constants.PARAM_RULE_CODE, _currentRuleCode );
             cuidMap.put( PARAMETER_PAGE, String.valueOf( _currentPage ) );
+            Arrays.asList( PARAMETERS_DUPLICATE_SEARCH ).forEach( searchKey -> cuidMap.put( searchKey, request.getParameter( searchKey ) ) );
 
             return redirect( request, VIEW_RESOLVE_DUPLICATES, cuidMap );
         }
@@ -400,6 +382,7 @@ public class IdentityDuplicateJspBean extends MVCAdminJspBean
         Map<String, Object> model = populateModel( );
         model.put( MARK_IDENTITY_TO_KEEP, _identityToKeep );
         model.put( MARK_IDENTITY_TO_MERGE, _identityToMerge );
+        Arrays.asList( PARAMETERS_DUPLICATE_SEARCH ).forEach( searchKey -> model.put( searchKey, request.getParameter( searchKey ) ) );
 
         return getPage( PROPERTY_PAGE_TITLE_RESOLVE_DUPLICATES, TEMPLATE_RESOLVE_DUPLICATES, model );
     }
@@ -575,31 +558,90 @@ public class IdentityDuplicateJspBean extends MVCAdminJspBean
      */
     public void init( final HttpServletRequest request, boolean forceRefresh )
     {
+        _totalRecordByRule = new HashMap<>();
+        _ruleBySuspiciousIdentity = new HashMap<>();
+        _totalRecords = 0;
         initClientCode( request );
         initServiceContract( _currentClientCode );
         initDuplicateRules( forceRefresh );
         _previousRuleCode = _currentRuleCode;
+        _mediationIdentities.clear( );
+        String pageParam = request.getParameter( PARAMETER_PAGE );
+        _currentPage = Optional.ofNullable( StringUtils.isNotBlank(pageParam) ? pageParam : null ).map( Integer::parseInt ).orElse( 1 );
 
-        final Optional<String> ruleCodeOpt = Optional.ofNullable( request.getParameter( Constants.PARAM_RULE_CODE ) );
+        //on va vérifier si on fait une recherche de doublon par règle
+        String ruleParam = request.getParameter( Constants.PARAM_RULE_CODE );
+        final Optional<String> ruleCodeOpt = Optional.ofNullable( StringUtils.isNotBlank(ruleParam) ? ruleParam : null );
 
-        ruleCodeOpt.ifPresent( ruleCode -> {
-            _currentRuleCode = ruleCode;
-            _currentPage = Optional.ofNullable( request.getParameter( PARAMETER_PAGE ) ).map( Integer::parseInt ).orElse( 1 );
+        //on va vérifier si on fait une recherche de doublon par attributs
+        final List<Optional<String>> identitySearch = new ArrayList<>();
+        String attributeParam = request.getParameter(Constants.PARAM_FIRST_NAME );
+        identitySearch.add(Optional.ofNullable( StringUtils.isNotBlank(attributeParam)  ? attributeParam : null ) ) ;
+        attributeParam = request.getParameter(Constants.PARAM_FAMILY_NAME );
+        identitySearch.add(Optional.ofNullable( StringUtils.isNotBlank( attributeParam )  ? attributeParam : null ) );
+        attributeParam = request.getParameter(Constants.PARAM_BIRTH_DATE );
+        identitySearch.add(Optional.ofNullable(StringUtils.isNotBlank( attributeParam )  ? attributeParam : null ) );
+        final boolean attributeSearchPresent = identitySearch.stream().anyMatch(Optional::isPresent);
+
+        if( attributeSearchPresent || ruleCodeOpt.isPresent())
+        {
+            List<String> rulesList = new ArrayList<>();
+            boolean search = false;
+            if(ruleCodeOpt.isPresent())
+            {
+                rulesList.add( ruleCodeOpt.get() );
+                _currentRuleCode = ruleCodeOpt.get();
+                if(attributeSearchPresent)
+                {
+                    search = true;
+                    //sert à initialiser la liste des doublons par attributs sélectionnés
+                    _totalRecordByRule.putAll(_duplicateRules.stream().collect(Collectors.toMap(DuplicateRuleSummaryDto::getCode, rule -> 0)));
+                    getSuspiciousSummary(request);
+                }
+            }
+            else
+            {
+                search = true;
+                _totalRecordByRule.putAll(_duplicateRules.stream().collect(Collectors.toMap(DuplicateRuleSummaryDto::getCode, rule -> 0)));
+                rulesList.addAll(_duplicateRules.stream().map(DuplicateRuleSummaryDto::getCode).collect(Collectors.toList()));
+            }
+
+            final boolean finalSearch = search;
+            rulesList.stream().parallel().forEach(rule -> {
+                String currentRuleCode = ruleCodeOpt.orElse(rule);
+                try
+                {
+                    initMediationIdentities( request, forceRefresh, finalSearch, currentRuleCode );
+                }
+                catch( final IdentityStoreException e )
+                {
+                    AppLogService.error( "Error while retrieving mediation identities.", e );
+                    addError( MESSAGE_FETCH_ERROR, getLocale( ) );
+                }
+            });
+            _totalRecords = _totalRecordByRule.values().stream().mapToInt(Integer::intValue).sum();
+        }
+        //si aucun code n'est présent on met _currentRuleCode à "" pour éviter un plantage sur la jsp
+        if(!ruleCodeOpt.isPresent())
+        {
+            _currentRuleCode = "";
+        }
+    }
+
+    private void getSuspiciousSummary(final HttpServletRequest request)
+    {
+        for ( DuplicateRuleSummaryDto rule : _duplicateRules)
+        {
+            String currentRuleCode = rule.getCode();
             try
             {
-                initMediationIdentities( request, forceRefresh );
+                fetchPotentialDuplicateHolders(request, currentRuleCode);
             }
             catch( final IdentityStoreException e )
             {
                 AppLogService.error( "Error while retrieving mediation identities.", e );
                 addError( MESSAGE_FETCH_ERROR, getLocale( ) );
             }
-        } );
-
-        if ( !ruleCodeOpt.isPresent( ) )
-        {
-            _currentRuleCode = null;
-            _mediationIdentities.clear( );
         }
     }
 
@@ -727,12 +769,12 @@ public class IdentityDuplicateJspBean extends MVCAdminJspBean
      * @return the list of identities
      * @throws IdentityStoreException
      */
-    private List<IdentityDto> fetchPotentialDuplicateHolders( final HttpServletRequest request ) throws IdentityStoreException
+    private List<IdentityDto> fetchPotentialDuplicateHolders( final HttpServletRequest request, final String currentRuleCode ) throws IdentityStoreException
     {
         final List<IdentityDto> identities = new ArrayList<>( );
         final ArrayList<SearchAttribute> searchAttributes = new ArrayList<>( );
         SuspiciousIdentitySearchRequest searchRequest = new SuspiciousIdentitySearchRequest( );
-        searchRequest.setRuleCode( _currentRuleCode );
+        searchRequest.setRuleCode( currentRuleCode );
 
         for ( String searchKey : PARAMETERS_DUPLICATE_SEARCH )
         {
@@ -763,6 +805,7 @@ public class IdentityDuplicateJspBean extends MVCAdminJspBean
                 identities.add( getQualifiedIdentityFromCustomerId( suspiciousIdentity.getCustomerId( ) ) );
             }
             _totalPages = response.getPagination( ).getTotalPages( );
+            _totalRecordByRule.replace(currentRuleCode, response.getPagination( ).getTotalRecords());
         }
         else
         {
@@ -781,18 +824,24 @@ public class IdentityDuplicateJspBean extends MVCAdminJspBean
      * @throws IdentityStoreException
      *             If an error occurs during retrieval.
      */
-    private void initMediationIdentities( final HttpServletRequest request, boolean forceRefresh ) throws IdentityStoreException
+    private void initMediationIdentities( final HttpServletRequest request, boolean forceRefresh, boolean search, final String currentRuleCode) throws IdentityStoreException
     {
-        if ( _currentRuleCode.equals( _previousRuleCode ) && !_mediationIdentities.isEmpty( ) && !forceRefresh )
+        if ( currentRuleCode.equals( _previousRuleCode ) && !_mediationIdentities.isEmpty( ) && !forceRefresh )
         {
             return;
         }
-        final List<IdentityDto> potentialDuplicateHolders = fetchPotentialDuplicateHolders( request );
-        final List<MediationIdentity> mediationIdentities = fetchMediationIdentities( potentialDuplicateHolders );
-        _mediationIdentities.clear( );
-        if ( !mediationIdentities.isEmpty( ) )
+        final List<IdentityDto> potentialDuplicateHolders = fetchPotentialDuplicateHolders( request, currentRuleCode );
+        final List<MediationIdentity> fetchedMediationIdentities = fetchMediationIdentities( potentialDuplicateHolders, currentRuleCode );
+        if(!search) {
+            _mediationIdentities.clear();
+        }
+        if ( !fetchedMediationIdentities.isEmpty( ) )
         {
-            _mediationIdentities.addAll( mediationIdentities );
+            _mediationIdentities.addAll( fetchedMediationIdentities );
+            for(MediationIdentity mediationIdentity : fetchedMediationIdentities )
+            {
+                _ruleBySuspiciousIdentity.put(mediationIdentity.getSuspiciousIdentity().getCustomerId(), currentRuleCode);
+            }
         }
     }
 
@@ -896,9 +945,9 @@ public class IdentityDuplicateJspBean extends MVCAdminJspBean
      * @param identity
      * @return the List of potential duplicates.
      */
-    private List<IdentityDto> fetchPotentialDuplicates( final IdentityDto identity ) throws IdentityStoreException
+    private List<IdentityDto> fetchPotentialDuplicates( final IdentityDto identity, String currentRuleCode ) throws IdentityStoreException
     {
-        final DuplicateSearchResponse response = _serviceQuality.getDuplicates( identity.getCustomerId( ), _currentRuleCode, _currentClientCode,
+        final DuplicateSearchResponse response = _serviceQuality.getDuplicates( identity.getCustomerId( ), currentRuleCode, _currentClientCode,
                 buildAgentAuthor( ) );
         if ( isSuccess( response ) && !response.getIdentities( ).isEmpty( ) )
         {
@@ -981,14 +1030,14 @@ public class IdentityDuplicateJspBean extends MVCAdminJspBean
      * @throws IdentityStoreException
      *             if there is an issue with the identity store.
      */
-    private List<MediationIdentity> fetchMediationIdentities( final List<IdentityDto> identities ) throws IdentityStoreException
+    private List<MediationIdentity> fetchMediationIdentities( final List<IdentityDto> identities, final String currentRuleCode ) throws IdentityStoreException
     {
         final List<MediationIdentity> listIdentityToMerge = new ArrayList<>( );
 
         final List<IdentityDto> identitiesCopy = new ArrayList<>( identities );
         for ( final IdentityDto suspiciousIdentity : identitiesCopy )
         {
-            final List<IdentityDto> duplicateList = new ArrayList<>( fetchPotentialDuplicates( suspiciousIdentity ) );
+            final List<IdentityDto> duplicateList = new ArrayList<>( fetchPotentialDuplicates( suspiciousIdentity, currentRuleCode ) );
             duplicateList.add( suspiciousIdentity );
             duplicateList.sort( Comparator.comparing( o -> o.getQuality( ).getQuality( ), Comparator.reverseOrder( ) ) );
             final IdentityDto bestIdentity = duplicateList.get( 0 );
@@ -1088,6 +1137,11 @@ public class IdentityDuplicateJspBean extends MVCAdminJspBean
     {
         Map<String, Object> model = getModel( );
 
+        if(!_totalRecordByRule.isEmpty())
+        {
+            model.put("errors", new ArrayList<>());
+        }
+
         model.put( MARK_SERVICE_CONTRACT, _serviceContract );
         model.put( MARK_DUPLICATE_RULE_LIST, _duplicateRules );
         model.put( MARK_CURRENT_RULE_CODE, _currentRuleCode );
@@ -1095,6 +1149,9 @@ public class IdentityDuplicateJspBean extends MVCAdminJspBean
         model.put( MARK_CURRENT_PAGE, _currentPage );
         model.put( MARK_TOTAL_PAGES, _totalPages );
         model.put( MARK_SUSPICIOUS_IDENTITY, _suspiciousIdentity );
+        model.put( MARK_COUNT_DUPLICATE_BY_RULE, _totalRecordByRule);
+        model.put( MARK_TOTAL_DUPLICATED, _totalRecords);
+        model.put( MARK_RULE_BY_IDENTITY, _ruleBySuspiciousIdentity);
 
         return model;
     }
