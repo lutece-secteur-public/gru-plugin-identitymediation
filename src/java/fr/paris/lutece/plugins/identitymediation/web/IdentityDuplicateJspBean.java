@@ -662,7 +662,7 @@ public class IdentityDuplicateJspBean extends MVCAdminJspBean
                         _rulePriorityMin );
                 if ( isSuccess( response ) )
                 {
-                    _duplicateRules.addAll( response.getDuplicateRuleSummaries( ) );
+                    _duplicateRules.addAll( response.getDuplicateRuleSummaries( ).stream().filter(DuplicateRuleSummaryDto::isActive).collect(Collectors.toList()));
                 }
                 else
                 {
