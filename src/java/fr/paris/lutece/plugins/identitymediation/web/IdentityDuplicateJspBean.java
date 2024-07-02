@@ -67,6 +67,9 @@ import org.apache.commons.lang3.StringUtils;
 import javax.servlet.http.HttpServletRequest;
 import java.sql.Timestamp;
 import java.util.*;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ExecutionException;
 import java.util.stream.Collectors;
 
 /**
@@ -99,6 +102,7 @@ public class IdentityDuplicateJspBean extends MVCAdminJspBean
     private static final String VIEW_SEARCH_DUPLICATES = "searchDuplicates";
     private static final String VIEW_SELECT_IDENTITIES = "selectIdentities";
     private static final String VIEW_RESOLVE_DUPLICATES = "resolveDuplicates";
+    private static final String VIEW_SEARCH_ALL_DUPLICATES = "searchAllDuplicates";
 
     // Actions
     private static final String ACTION_SWAP_IDENTITIES = "swapIdentities";
@@ -111,6 +115,7 @@ public class IdentityDuplicateJspBean extends MVCAdminJspBean
     private static final String TEMPLATE_SEARCH_DUPLICATES = "/admin/plugins/identitymediation/search_duplicates.html";
     private static final String TEMPLATE_SELECT_IDENTITIES = "/admin/plugins/identitymediation/select_identities.html";
     private static final String TEMPLATE_RESOLVE_DUPLICATES = "/admin/plugins/identitymediation/resolve_duplicates.html";
+    private static final String TEMPLATE_SEARCH_ALL_DUPLICATES = "admin/plugins/identitymediation/search_all_duplicates.html";
 
     // Properties for page titles
     private static final String PROPERTY_PAGE_TITLE_CHOOSE_DUPLICATE_TYPE = "identitymediation.choose_duplicate_type.pageTitle";
@@ -126,11 +131,13 @@ public class IdentityDuplicateJspBean extends MVCAdminJspBean
     final String PARAMETER_PAGE = "page";
     final String PARAMETER_CUID_PINNED = "cuid_pinned";
     final String PARAMETER_CUID_TO_EXCLUDE = "cuid_to_exclude";
+    final String PARAMETER_CUID = "cuid";
 
     // Markers
     private static final String MARK_DUPLICATE_RULE_LIST = "duplicate_rule_list";
     private static final String MARK_SERVICE_CONTRACT = "service_contract";
     private static final String MARK_IDENTITY_LIST = "identity_list";
+    private static final String MARK_IDENTITY = "identity";
     private static final String MARK_IDENTITY_TO_KEEP = "identity_to_keep";
     private static final String MARK_IDENTITY_TO_MERGE = "identity_to_merge";
     private static final String MARK_CURRENT_RULE_CODE = "current_rule_code";
@@ -142,6 +149,7 @@ public class IdentityDuplicateJspBean extends MVCAdminJspBean
     private static final String MARK_COUNT_DUPLICATE_BY_RULE = "count_duplicate_by_rule";
     private static final String MARK_TOTAL_DUPLICATED = "count_total_duplicated";
     private static final String MARK_RULE_BY_IDENTITY = "rule_by_identity";
+    private static final String MARK_DUPLICATE_LIST_BY_RULE = "duplicate_list_by_rule";
 
     // Beans
     private static final IdentityQualityService _serviceQuality = SpringContextService.getBean( "identityQualityService.rest.httpAccess" );
@@ -224,6 +232,51 @@ public class IdentityDuplicateJspBean extends MVCAdminJspBean
     }
 
     /**
+     * Search duplicates for each rule
+     * @param request the request
+     * @return the view
+     */
+    @View ( value = VIEW_SEARCH_ALL_DUPLICATES )
+    public String getAllDuplicates( final HttpServletRequest request ) {
+
+        String cuid = request.getParameter( PARAMETER_CUID );
+
+        
+        if ( StringUtils.isBlank( cuid ) )
+        {
+            return getSearchDuplicates( request );
+        }
+
+        IdentityDto identity;
+        try {
+            identity = getQualifiedIdentityFromCustomerId( cuid );
+        } catch (IdentityStoreException e) {
+            addError( MESSAGE_GET_IDENTITY_ERROR, getLocale( ) );
+            return getSearchDuplicates( request );
+        }
+
+        if ( identity == null )
+        {
+            addError( MESSAGE_GET_IDENTITY_ERROR, getLocale( ) );
+            return getSearchDuplicates( request );
+        }
+
+        init( request, true );
+
+        final Map<String, Object> model = getModel( );
+        try {
+            model.put( MARK_DUPLICATE_LIST_BY_RULE, fetchPotentialDuplicates( identity ) );
+            model.put( MARK_IDENTITY, identity );
+        } catch (IdentityStoreException e) {
+            addError( MESSAGE_FETCH_DUPLICATES_ERROR, getLocale( ) );
+            return getSearchDuplicates( request );
+        }
+
+        return getPage( PROPERTY_PAGE_TITLE_SEARCH_DUPLICATES, TEMPLATE_SEARCH_ALL_DUPLICATES, model );
+
+    }
+
+    /**
      * Returns the form to select which identities to process
      * 
      * @param request
@@ -256,7 +309,7 @@ public class IdentityDuplicateJspBean extends MVCAdminJspBean
         final List<IdentityDto> identityList = new ArrayList<>( );
         try
         {
-            final List<IdentityDto> duplicateList = fetchPotentialDuplicates( _suspiciousIdentity, _currentRuleCode );
+            final List<IdentityDto> duplicateList = fetchPotentialDuplicates( _suspiciousIdentity, _currentRuleCode, true );
             if ( CollectionUtils.isEmpty( duplicateList ) )
             {
                 return getSearchDuplicates( request );
@@ -945,7 +998,7 @@ public class IdentityDuplicateJspBean extends MVCAdminJspBean
      * @param identity
      * @return the List of potential duplicates.
      */
-    private List<IdentityDto> fetchPotentialDuplicates( final IdentityDto identity, String currentRuleCode ) throws IdentityStoreException
+    private List<IdentityDto> fetchPotentialDuplicates( final IdentityDto identity, String currentRuleCode, Boolean showError ) throws IdentityStoreException
     {
         final DuplicateSearchResponse response = _serviceQuality.getDuplicates( identity.getCustomerId( ), currentRuleCode, _currentClientCode,
                 buildAgentAuthor( ) );
@@ -953,12 +1006,47 @@ public class IdentityDuplicateJspBean extends MVCAdminJspBean
         {
             return response.getIdentities( );
         }
-        logAndDisplayStatusErrorMessage( response );
+        if ( showError ) {
+            logAndDisplayStatusErrorMessage( response );
+        }
         return Collections.emptyList( );
     }
 
+
+    private Map<DuplicateRuleSummaryDto, List<IdentityDto>> fetchPotentialDuplicates(IdentityDto identity) throws IdentityStoreException {
+        if (identity == null) {
+            return Collections.emptyMap();
+        }
+        
+        initDuplicateRules(false);
+
+        final Map<DuplicateRuleSummaryDto, List<IdentityDto>> duplicates = new ConcurrentHashMap<>();
+        List<CompletableFuture<Void>> futures = _duplicateRules.stream()
+            .map(rule -> CompletableFuture.runAsync(() -> {
+                try {
+                    List<IdentityDto> potentialDuplicates = fetchPotentialDuplicates(identity, rule.getCode(), false);
+                    if (!potentialDuplicates.isEmpty()) {
+                        duplicates.put(rule, potentialDuplicates);
+                    }
+                } catch (IdentityStoreException e) {
+                    AppLogService.error( "Error while fetching potential duplicates", e );
+                }
+            }))
+            .collect(Collectors.toList());
+    
+        CompletableFuture<Void> allOf = CompletableFuture.allOf(futures.toArray(new CompletableFuture[0]));
+        try {
+            allOf.get();
+        } catch (InterruptedException | ExecutionException e) {
+            throw new IdentityStoreException("Error fetching potential duplicates", e);
+        }
+    
+        return duplicates;
+    }
+
+
     /**
-     * buil merge request
+     * buil merge reques
      * 
      * @param request
      * @return the IdentityMergeRequests
@@ -1037,7 +1125,7 @@ public class IdentityDuplicateJspBean extends MVCAdminJspBean
         final List<IdentityDto> identitiesCopy = new ArrayList<>( identities );
         for ( final IdentityDto suspiciousIdentity : identitiesCopy )
         {
-            final List<IdentityDto> duplicateList = new ArrayList<>( fetchPotentialDuplicates( suspiciousIdentity, currentRuleCode ) );
+            final List<IdentityDto> duplicateList = new ArrayList<>( fetchPotentialDuplicates( suspiciousIdentity, currentRuleCode, true ) );
             duplicateList.add( suspiciousIdentity );
             duplicateList.sort( Comparator.comparing( o -> o.getQuality( ).getQuality( ), Comparator.reverseOrder( ) ) );
             final IdentityDto bestIdentity = duplicateList.get( 0 );

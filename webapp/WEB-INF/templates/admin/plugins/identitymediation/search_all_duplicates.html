@@ -1,0 +1,47 @@
+<@pageContainer>
+    <@pageColumn>
+        <@pageHeader 
+            title="#i18n{identitymediation.search_all_duplicates.title}" 
+            description="<strong>Customer ID:</strong> ${identity.customerId}" 
+        />    
+        <@table id="duplicates-table" bordered=true>
+            <thead>
+                <tr>
+                    <@th>#i18n{identitymediation.choose_duplicate_type.ruleColumn}</@th>
+                    <@th>Type</@th>
+                    <@th>#i18n{identitymediation.choose_duplicate_type.descriptionColumn}</@th>
+                    <th style="width:200px">#i18n{identitymediation.choose_duplicate_type.duplicatesColumn}</th>
+                    <th>#i18n{identitymediation.choose_duplicate_type.actionColumn}</th>
+                </tr>
+            </thead>
+            <tbody>
+                <#if duplicate_list_by_rule?size == 0>
+                    <tr>
+                        <td colspan="5" class="text-center">
+                            #i18n{identitymediation.choose_duplicate_type.emptyDuplicate}
+                        </td>
+                    </tr>
+                <#else>
+                    <#list duplicate_list_by_rule as rule, duplicates>
+                        <tr>
+                            <td>${rule.code}</td>
+                            <td>${rule.name}</td>
+                            <td>${rule.description}</td>
+                            <td class="text-center" style="width:200px">
+                                <@tag color="warning">
+                                    ${duplicates?size} #i18n{identitymediation.choose_duplicate_type.identities}
+                                </@tag>
+                            </td>
+                            <td>
+                                <@aButton 
+                                    href="jsp/admin/plugins/identitymediation/IdentityDuplicate.jsp?view=selectIdentities&cuid=${identity.customerId}&code=${rule.code}&page=1&family_name=&first_name=&birthdate=" 
+                                    buttonIcon="eye" 
+                                />
+                            </td>
+                        </tr>
+                    </#list>
+                </#if>
+            </tbody>
+        </@table>
+    </@pageColumn>
+</@pageContainer>
