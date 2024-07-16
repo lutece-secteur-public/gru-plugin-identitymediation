@@ -49,6 +49,7 @@ export default class MediationCompare {
             if (this.config.merge) {
                 this.activateMerge();
             }
+            this.copyTooltipContent();
         });
     }
     /**
@@ -248,6 +249,29 @@ export default class MediationCompare {
             });
             item.addEventListener('mouseout', () => {
                 this.tooltip.style.display = 'none';
+            });
+        });
+    }
+
+    copyTooltipContent() {
+        const tooltipTriggerList = [].slice.call(document.querySelectorAll('.copy-tooltip'));
+        const tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
+            return new bootstrap.Tooltip(tooltipTriggerEl);
+        });
+        tooltipTriggerList.forEach(function(element) {
+            element.addEventListener('click', function() {
+                const customerId = this.getAttribute('data-customer-id');
+    
+                navigator.clipboard.writeText(customerId).then(() => {
+                    const tooltip = bootstrap.Tooltip.getInstance(this);
+                    const originalTitle = this.getAttribute('data-bs-original-title');
+                    tooltip.setContent({ '.tooltip-inner': 'Copié' });
+                    setTimeout(() => {
+                        tooltip.setContent({ '.tooltip-inner': originalTitle });
+                    }, 300);
+                }).catch(err => {
+                    console.error('Erreur lors de la copie : ', err);
+                });
             });
         });
     }

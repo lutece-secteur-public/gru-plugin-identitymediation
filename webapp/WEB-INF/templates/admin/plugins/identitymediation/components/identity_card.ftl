@@ -41,7 +41,7 @@
                 </#if>
             </#if>
             <div class="py-4 text-center">
-                <h3 class="px-2 text-truncate">
+                <h3 class="px-2 text-truncate mb-0 copy-tooltip" data-bs-toggle="tooltip" data-bs-placement="top" data-bs-html="true" data-customer-id="${identity.customerId}" title="<small  class='text-truncate text-break'>${identity.customerId?truncate(33)}</small>">
                 <#if familyNameAttr?? && familyNameAttr.value?? && familyNameAttr.value?has_content>
                     ${familyNameAttr.value}
                 </#if>
