@@ -33,7 +33,9 @@
  */
 package fr.paris.lutece.plugins.identitymediation.web;
 
+import fr.paris.lutece.api.user.User;
 import fr.paris.lutece.plugins.identitymediation.buisness.MediationIdentity;
+import fr.paris.lutece.plugins.identitymediation.rbac.AccessDuplicateResource;
 import fr.paris.lutece.plugins.identityquality.v3.web.service.IdentityQualityService;
 import fr.paris.lutece.plugins.identitystore.v3.web.rs.dto.common.*;
 import fr.paris.lutece.plugins.identitystore.v3.web.rs.dto.contract.ServiceContractDto;
@@ -53,7 +55,9 @@ import fr.paris.lutece.plugins.identitystore.v3.web.rs.util.Constants;
 import fr.paris.lutece.plugins.identitystore.v3.web.service.IdentityServiceExtended;
 import fr.paris.lutece.plugins.identitystore.v3.web.service.ServiceContractService;
 import fr.paris.lutece.plugins.identitystore.web.exception.IdentityStoreException;
+import fr.paris.lutece.portal.service.admin.AccessDeniedException;
 import fr.paris.lutece.portal.service.i18n.I18nService;
+import fr.paris.lutece.portal.service.rbac.RBACService;
 import fr.paris.lutece.portal.service.spring.SpringContextService;
 import fr.paris.lutece.portal.service.util.AppLogService;
 import fr.paris.lutece.portal.service.util.AppPropertiesService;
@@ -185,8 +189,10 @@ public class IdentityDuplicateJspBean extends MVCAdminJspBean
      * @return
      */
     @View( value = VIEW_CHOOSE_DUPLICATE_TYPE )
-    public String getDuplicateTypes( final HttpServletRequest request )
-    {
+    public String getDuplicateTypes( final HttpServletRequest request ) throws AccessDeniedException {
+        if(!RBACService.isAuthorized(new AccessDuplicateResource(), AccessDuplicateResource.PERMISSION_READ, (User) getUser())) {
+            throw new AccessDeniedException("You don't have the right to read duplicates");
+        }
         _suspiciousIdentity = null;
         init( request, true );
 
@@ -205,8 +211,10 @@ public class IdentityDuplicateJspBean extends MVCAdminJspBean
      * @return the html code of the duplicate form
      */
     @View( value = VIEW_SEARCH_DUPLICATES, defaultView = true )
-    public String getSearchDuplicates( final HttpServletRequest request )
-    {
+    public String getSearchDuplicates( final HttpServletRequest request ) throws AccessDeniedException {
+        if(!RBACService.isAuthorized(new AccessDuplicateResource(), AccessDuplicateResource.PERMISSION_READ, (User) getUser())) {
+            throw new AccessDeniedException("You don't have the right to read duplicates");
+        }
         _suspiciousIdentity = null;
         init( request, true );
 
@@ -237,11 +245,11 @@ public class IdentityDuplicateJspBean extends MVCAdminJspBean
      * @return the view
      */
     @View ( value = VIEW_SEARCH_ALL_DUPLICATES )
-    public String getAllDuplicates( final HttpServletRequest request ) {
-
+    public String getAllDuplicates( final HttpServletRequest request ) throws AccessDeniedException {
+        if(!RBACService.isAuthorized(new AccessDuplicateResource(), AccessDuplicateResource.PERMISSION_READ, (User) getUser())) {
+            throw new AccessDeniedException("You don't have the right to read duplicates");
+        }
         String cuid = request.getParameter( PARAMETER_CUID );
-
-        
         if ( StringUtils.isBlank( cuid ) )
         {
             return getSearchDuplicates( request );
@@ -283,8 +291,10 @@ public class IdentityDuplicateJspBean extends MVCAdminJspBean
      * @return the view
      */
     @View( value = VIEW_SELECT_IDENTITIES )
-    public String getSelectIdentities( final HttpServletRequest request )
-    {
+    public String getSelectIdentities( final HttpServletRequest request ) throws AccessDeniedException {
+        if(!RBACService.isAuthorized(new AccessDuplicateResource(), AccessDuplicateResource.PERMISSION_READ, (User) getUser())) {
+            throw new AccessDeniedException("You don't have the right to read duplicates");
+        }
         final String cuidPinned = request.getParameter( PARAMETER_CUID_PINNED );
         if ( StringUtils.isBlank( request.getParameter( Constants.PARAM_RULE_CODE ) ) )
         {
@@ -368,8 +378,10 @@ public class IdentityDuplicateJspBean extends MVCAdminJspBean
      * @return the html code of the form
      */
     @View( value = VIEW_RESOLVE_DUPLICATES )
-    public String getResolveDuplicates( final HttpServletRequest request )
-    {
+    public String getResolveDuplicates( final HttpServletRequest request ) throws AccessDeniedException {
+        if(!RBACService.isAuthorized(new AccessDuplicateResource(), AccessDuplicateResource.PERMISSION_WRITE, (User) getUser())) {
+            throw new AccessDeniedException("You don't have the right to write duplicates");
+        }
         final String _suspiciousCuid = request.getParameter( "cuid" );
 
         if ( StringUtils.isBlank( request.getParameter( Constants.PARAM_RULE_CODE ) ) && _currentRuleCode == null )
@@ -447,8 +459,10 @@ public class IdentityDuplicateJspBean extends MVCAdminJspBean
      * @return the view
      */
     @Action( ACTION_SWAP_IDENTITIES )
-    public String doSwapIdentities( final HttpServletRequest request )
-    {
+    public String doSwapIdentities( final HttpServletRequest request ) throws AccessDeniedException {
+        if(!RBACService.isAuthorized(new AccessDuplicateResource(), AccessDuplicateResource.PERMISSION_WRITE, (User) getUser())) {
+            throw new AccessDeniedException("You don't have the right to write duplicates");
+        }
         final IdentityDto previouslyToKeep = _identityToKeep;
         _identityToKeep = _identityToMerge;
         _identityToMerge = previouslyToKeep;
@@ -467,8 +481,10 @@ public class IdentityDuplicateJspBean extends MVCAdminJspBean
      * @return
      */
     @Action( ACTION_MERGE_DUPLICATE )
-    public String doMergeDuplicate( final HttpServletRequest request )
-    {
+    public String doMergeDuplicate( final HttpServletRequest request ) throws AccessDeniedException {
+        if(!RBACService.isAuthorized(new AccessDuplicateResource(), AccessDuplicateResource.PERMISSION_WRITE, (User) getUser())) {
+            throw new AccessDeniedException("You don't have the right to write duplicates");
+        }
         if ( _identityToKeep == null || _identityToMerge == null || _identityToMerge.equals( _identityToKeep ) )
         {
             addError( MESSAGE_MERGE_DUPLICATES_ERROR, getLocale( ) );
@@ -532,8 +548,10 @@ public class IdentityDuplicateJspBean extends MVCAdminJspBean
      * @return
      */
     @Action( ACTION_EXCLUDE_DUPLICATE )
-    public String doExcludeDuplicate( final HttpServletRequest request )
-    {
+    public String doExcludeDuplicate( final HttpServletRequest request ) throws AccessDeniedException {
+        if(!RBACService.isAuthorized(new AccessDuplicateResource(), AccessDuplicateResource.PERMISSION_WRITE, (User) getUser())) {
+            throw new AccessDeniedException("You don't have the right to write duplicates");
+        }
         final String cuidToExclude = request.getParameter( PARAMETER_CUID_TO_EXCLUDE );
 
         if ( cuidToExclude == null || _suspiciousIdentity == null )
@@ -584,8 +602,7 @@ public class IdentityDuplicateJspBean extends MVCAdminJspBean
      * @return
      */
     @Action( ACTION_CANCEL )
-    public String doCancel( final HttpServletRequest request )
-    {
+    public String doCancel( final HttpServletRequest request ) throws AccessDeniedException {
         try
         {
             releaseAcknowledgement( _suspiciousIdentity );
