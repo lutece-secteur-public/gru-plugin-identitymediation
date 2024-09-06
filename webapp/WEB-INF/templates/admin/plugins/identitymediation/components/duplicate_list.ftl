@@ -18,7 +18,7 @@
     </#if>
     <@pageColumn width="25rem" flush=true responsiveMenuSize="xxl" responsiveMenuPlacement="end"
       responsiveMenuTitle="#i18n{identitymediation.search_duplicates.pageTitle}" id="mediation-duplicate-list" class=" border-start-0" responsiveMenuClose=isClosed>
-        <div class="border-bottom p-4 sticky-top">
+        <div class="border-bottom p-4">
         <h1 class="text-center mb-0 py-2 pb-1">${title!''}
         </h1>
         </div>
