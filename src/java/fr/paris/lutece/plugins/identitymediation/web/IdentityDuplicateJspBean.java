@@ -156,9 +156,9 @@ public class IdentityDuplicateJspBean extends MVCAdminJspBean
     private static final String MARK_DUPLICATE_LIST_BY_RULE = "duplicate_list_by_rule";
 
     // Beans
-    private static final IdentityQualityService _serviceQuality = SpringContextService.getBean( "identityQualityService.rest.httpAccess" );
-    private static final ServiceContractService _serviceContractService = SpringContextService.getBean( "serviceContract.rest.httpAccess" );
-    private static final IdentityServiceExtended _serviceIdentity = SpringContextService.getBean( "identityService.rest.httpAccess" );
+    private static final IdentityQualityService _serviceQuality = SpringContextService.getBean( "identitymediation.identityQualityService.rest.httpAccess" );
+    private static final ServiceContractService _serviceContractService = SpringContextService.getBean( "identitymediation.serviceContract.rest.httpAccess" );
+    private static final IdentityServiceExtended _serviceIdentity = SpringContextService.getBean( "identitymediation.identityService.rest.httpAccess" );
 
     // Properties
     private final List<String> _sortedAttributeKeyList = Arrays.asList( AppPropertiesService.getProperty( "identitymediation.attribute.order" ).split( "," ) );
