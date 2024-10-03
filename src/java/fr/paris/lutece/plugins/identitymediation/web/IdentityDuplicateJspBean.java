@@ -162,9 +162,9 @@ public class IdentityDuplicateJspBean extends MVCAdminJspBean
     public static final String MARK_CODE = "code";
 
     // Beans
-    private static final IdentityQualityService _serviceQuality = SpringContextService.getBean( "identityQualityService.rest.httpAccess" );
-    private static final ServiceContractService _serviceContractService = SpringContextService.getBean( "serviceContract.rest.httpAccess" );
-    private static final IdentityServiceExtended _serviceIdentity = SpringContextService.getBean( "identityService.rest.httpAccess" );
+    private static final IdentityQualityService _serviceQuality = SpringContextService.getBean( "identitymediation.identityQualityService.rest.httpAccess" );
+    private static final ServiceContractService _serviceContractService = SpringContextService.getBean( "identitymediation.serviceContract.rest.httpAccess" );
+    private static final IdentityServiceExtended _serviceIdentity = SpringContextService.getBean( "identitymediation.identityService.rest.httpAccess" );
 
     // Properties
     private final List<String> _sortedAttributeKeyList = Arrays.asList( AppPropertiesService.getProperty( "identitymediation.attribute.order" ).split( "," ) );
