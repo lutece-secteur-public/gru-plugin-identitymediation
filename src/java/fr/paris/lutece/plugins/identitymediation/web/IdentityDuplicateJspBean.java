@@ -51,6 +51,7 @@ import fr.paris.lutece.plugins.identitystore.v3.web.rs.dto.merge.IdentityMergeRe
 import fr.paris.lutece.plugins.identitystore.v3.web.rs.dto.search.DuplicateSearchResponse;
 import fr.paris.lutece.plugins.identitystore.v3.web.rs.dto.search.IdentitySearchResponse;
 import fr.paris.lutece.plugins.identitystore.v3.web.rs.dto.search.SearchAttribute;
+import fr.paris.lutece.plugins.identitystore.v3.web.rs.dto.task.*;
 import fr.paris.lutece.plugins.identitystore.v3.web.rs.util.Constants;
 import fr.paris.lutece.plugins.identitystore.v3.web.service.IdentityServiceExtended;
 import fr.paris.lutece.plugins.identitystore.v3.web.service.ServiceContractService;
@@ -100,6 +101,8 @@ public class IdentityDuplicateJspBean extends MVCAdminJspBean
     private static final String MESSAGE_EXCLUDE_DUPLICATES_SUCCESS = "identitymediation.message.exclude_duplicates.success";
     private static final String MESSAGE_EXCLUDE_DUPLICATES_ERROR = "identitymediation.message.exclude_duplicates.error";
     private static final String MESSAGE_FETCH_ERROR = "identitymediation.message.fetch.error";
+    private static final String MESSAGE_ACCOUNT_IDENTITY_MERGE = "identitymediation.message.account_identity_merge";
+    private static final String MESSAGE_ACCOUNT_IDENTITY_MERGE_ERROR = "identitymediation.message.account_identity_merge.error";
 
     // Views
     private static final String VIEW_CHOOSE_DUPLICATE_TYPE = "chooseDuplicateType";
@@ -113,6 +116,7 @@ public class IdentityDuplicateJspBean extends MVCAdminJspBean
     private static final String ACTION_MERGE_DUPLICATE = "mergeDuplicate";
     private static final String ACTION_EXCLUDE_DUPLICATE = "excludeDuplicate";
     private static final String ACTION_CANCEL = "cancel";
+    private static final String ACTION_CREATE_IDENTITY_MERGE_TASK = "createIdentityMergeTask";
 
     // Templates
     private static final String TEMPLATE_CHOOSE_DUPLICATE_TYPE = "/admin/plugins/identitymediation/choose_duplicate_type.html";
@@ -154,6 +158,8 @@ public class IdentityDuplicateJspBean extends MVCAdminJspBean
     private static final String MARK_TOTAL_DUPLICATED = "count_total_duplicated";
     private static final String MARK_RULE_BY_IDENTITY = "rule_by_identity";
     private static final String MARK_DUPLICATE_LIST_BY_RULE = "duplicate_list_by_rule";
+    public static final String MARK_CUID = "cuid";
+    public static final String MARK_CODE = "code";
 
     // Beans
     private static final IdentityQualityService _serviceQuality = SpringContextService.getBean( "identityQualityService.rest.httpAccess" );
@@ -382,9 +388,10 @@ public class IdentityDuplicateJspBean extends MVCAdminJspBean
         if(!RBACService.isAuthorized(new AccessDuplicateResource(), AccessDuplicateResource.PERMISSION_WRITE, (User) getUser())) {
             throw new AccessDeniedException("You don't have the right to write duplicates");
         }
-        final String _suspiciousCuid = request.getParameter( "cuid" );
+        final String _suspiciousCuid = request.getParameter( MARK_CUID );
+        final String code = request.getParameter(Constants.PARAM_RULE_CODE);
 
-        if ( StringUtils.isBlank( request.getParameter( Constants.PARAM_RULE_CODE ) ) && _currentRuleCode == null )
+        if ( StringUtils.isBlank(code) && _currentRuleCode == null )
         {
             AppLogService.error( "No duplicate rule code provided." );
             addError( MESSAGE_CHOOSE_DUPLICATE_TYPE_ERROR, getLocale( ) );
@@ -444,7 +451,9 @@ public class IdentityDuplicateJspBean extends MVCAdminJspBean
             return getSearchDuplicates( request );
         }
 
-        Map<String, Object> model = populateModel( );
+        final Map<String, Object> model = populateModel( );
+        model.put( MARK_CUID, _suspiciousIdentity.getCustomerId() );
+        model.put( MARK_CODE, code );
         model.put( MARK_IDENTITY_TO_KEEP, _identityToKeep );
         model.put( MARK_IDENTITY_TO_MERGE, _identityToMerge );
         Arrays.asList( PARAMETERS_DUPLICATE_SEARCH ).forEach( searchKey -> model.put( searchKey, request.getParameter( searchKey ) ) );
@@ -616,6 +625,52 @@ public class IdentityDuplicateJspBean extends MVCAdminJspBean
         _identityToKeep = null;
         _identityToMerge = null;
         return getSelectIdentities( request );
+    }
+
+    /**
+     * Create a merge demand by providing both CUIDs
+     * @param request
+     * @return
+     * @throws AccessDeniedException
+     */
+    @Action(ACTION_CREATE_IDENTITY_MERGE_TASK)
+    public String doCreateIdentityMergeTask(final HttpServletRequest request) throws AccessDeniedException
+    {
+        final String taskType = IdentityTaskType.ACCOUNT_IDENTITY_MERGE_REQUEST.name();
+        final String customerId = request.getParameter( Constants.PARAM_ID_CUSTOMER );
+        final String secondCuId = request.getParameter( Constants.METADATA_ACCOUNT_MERGE_SECOND_CUID );
+        try
+        {
+            final IdentityTaskCreateRequest identityTaskCreateRequest = new IdentityTaskCreateRequest( );
+            final IdentityTaskDto task = new IdentityTaskDto( );
+            task.setTaskType( taskType );
+            task.setResourceType( IdentityResourceType.CUID.name( ) );
+            task.setResourceId( customerId );
+            final Map<String, String> metadata = new HashMap<>();
+            metadata.put(Constants.METADATA_ACCOUNT_MERGE_SECOND_CUID, secondCuId);
+            metadata.put("origin", "owner");
+            task.setMetadata(metadata);
+            identityTaskCreateRequest.setTask( task );
+            final IdentityTaskCreateResponse identityTask = _serviceIdentity.createIdentityTask( identityTaskCreateRequest, _currentClientCode, this.buildAgentAuthor( ) );
+            if ( identityTask.getStatus( ).getHttpCode( ) == 201 )
+            {
+                addInfo(MESSAGE_ACCOUNT_IDENTITY_MERGE);
+                addInfo(identityTask.getTaskCode( ) + " " + identityTask.getStatus( ).getMessage( ));
+            }
+            else
+            {
+                addError( MESSAGE_ACCOUNT_IDENTITY_MERGE_ERROR, getLocale( ) );
+                addError( identityTask.getStatus( ).getMessage( ) );
+            }
+        }
+        catch( final IdentityStoreException e )
+        {
+            AppLogService.error( "Error while trying to create " + taskType + " for identity [customerId = " + customerId + "].", e );
+            addError( MESSAGE_ACCOUNT_IDENTITY_MERGE_ERROR, getLocale( ) );
+            addError( e.getMessage() );
+        }
+
+        return getResolveDuplicates( request );
     }
 
     /**
