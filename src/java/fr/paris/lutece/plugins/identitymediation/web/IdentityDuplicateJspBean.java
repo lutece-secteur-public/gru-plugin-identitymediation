@@ -654,8 +654,8 @@ public class IdentityDuplicateJspBean extends MVCAdminJspBean
             final IdentityTaskCreateResponse identityTask = _serviceIdentity.createIdentityTask( identityTaskCreateRequest, _currentClientCode, this.buildAgentAuthor( ) );
             if ( identityTask.getStatus( ).getHttpCode( ) == 201 )
             {
-                addInfo(MESSAGE_ACCOUNT_IDENTITY_MERGE);
-                addInfo(identityTask.getTaskCode( ) + " " + identityTask.getStatus( ).getMessage( ));
+                addInfo( MESSAGE_ACCOUNT_IDENTITY_MERGE, getLocale( ) );
+                addInfo( identityTask.getStatus( ).getMessage( ) );
             }
             else
             {
