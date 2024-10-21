@@ -31,9 +31,15 @@
             <#if identity_to_keep.monParisActive || identity_to_merge.monParisActive>
             <div class="alert alert-warning mt-2" role="alert">
                 <h3>#i18n{identitymediation.resolve_duplicates.alertMonParis.title}</h3>
-                <p class="m-0 text-body">#i18n{identitymediation.resolve_duplicates.alertMonParis.description} <a id="notify-btn" role="button" class="text-warning" data-bs-toggle="modal" data-bs-target="#notify-modal">
-                    #i18n{identitymediation.resolve_duplicates.buttonNotifyUsers}
-                </a></p>
+                <p class="m-0 text-body">#i18n{identitymediation.resolve_duplicates.alertMonParis.description}
+                    <#if identity_to_keep.monParisActive && identity_to_merge.monParisActive>
+                    <p>#i18n{identitymediation.resolve_duplicates.cannotNotifyUsers}</p>
+                    <#else>
+                    <a id="notify-btn" role="button" class="text-warning" data-bs-toggle="modal" data-bs-target="#notify-modal">
+                        #i18n{identitymediation.resolve_duplicates.buttonNotifyUsers}
+                    </a>
+                    </#if>
+                </p>
             </div>
             </#if>        
             <#if service_contract??>

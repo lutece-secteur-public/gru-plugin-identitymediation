@@ -55,15 +55,22 @@
 		<div class="modal-dialog rounded-5">
 			<div class="modal-content rounded-5">
 				<form class="form-inline container" action="jsp/admin/plugins/identitymediation/IdentityDuplicate.jsp">
+					<input type="hidden" name="customer_id" value="${identity_to_keep.customerId}" />
+					<input type="hidden" name="account_merge_second_cuid" value="${identity_to_merge.customerId}" />
+					<input type="hidden" name="cuid" value="${cuid}" />
+					<input type="hidden" name="code" value="${code}" />
+					<input type="hidden" name="identity-cuid-1" value="${identity_to_keep.customerId}" />
+					<input type="hidden" name="identity-cuid-2" value="${identity_to_merge.customerId}" />
 					<div class="modal-header border-0">
-						<h1 class="modal-title text-center w-100 p-4 pb-0" id="notifyModalLabel">#i18n{identitymediation.resolve_duplicates.confirm}</h1>
+						<h1 class="modal-title text-center w-100 p-4 pb-0" id="notifyModalLabel">#i18n{identitymediation.resolve_duplicates.notify_users.confirm}</h1>
 						<button type="button" class="btn btn-rounded border position-absolute end-0 me-3 top-0 mt-3" data-bs-dismiss="modal" aria-label="Close">x</button>
 					</div>
 					<div class="modal-body text-center border-0 pt-0">
-						Fonctionnalit&eacute; non d&eacute;velopp&eacute;e.
+						#i18n{identitymediation.resolve_duplicates.notify_users.description}
 					</div>
 					<div class="modal-footer justify-content-center pb-4 pt-0 border-0">
-						<button type="button" class="btn btn-secondary" data-bs-dismiss="modal">#i18n{identitymediation.resolve_duplicates.buttonCancel}</button>
+						<button class="btn btn-primary" name="action_createIdentityMergeTask">#i18n{identitymediation.resolve_duplicates.notify_users.buttonNotify}</button>
+						<button type="button" class="btn btn-secondary" data-bs-dismiss="modal">#i18n{identitymediation.resolve_duplicates.notify_users.buttonCancel}</button>
 					</div>
 				</form>
 			</div>
