@@ -34,7 +34,7 @@
                 <p class="m-0 text-body">#i18n{identitymediation.resolve_duplicates.alertMonParis.description}
                     <#if identity_to_keep.monParisActive && identity_to_merge.monParisActive>
                     <p>#i18n{identitymediation.resolve_duplicates.cannotNotifyUsers}</p>
-                    <#else>
+                    <#elseif (!identity_to_keep.monParisActive && identity_to_keep.canNotify) || (!identity_to_merge.monParisActive && identity_to_merge.canNotify)>
                     <a id="notify-btn" role="button" class="text-warning" data-bs-toggle="modal" data-bs-target="#notify-modal">
                         #i18n{identitymediation.resolve_duplicates.buttonNotifyUsers}
                     </a>

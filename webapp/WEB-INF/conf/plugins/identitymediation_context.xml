@@ -25,6 +25,9 @@
     <bean id="identitymediation.restTransport.identity.httpAccess" class="fr.paris.lutece.plugins.identitystore.v3.web.rs.service.IdentityTransportRest">
         <constructor-arg ref="identitymediation.httpAccessTransport-ids" />
     </bean>
+    <bean id="identitymediation.referential.restTransport.httpAccess" class="fr.paris.lutece.plugins.identitystore.v3.web.rs.service.ReferentialTransportRest">
+        <constructor-arg ref="identitymediation.httpAccessTransport-ids"/>
+    </bean>
 
     <!-- QualityService impl -->
     <bean id="identitymediation.identityQualityService.rest.httpAccess" class="fr.paris.lutece.plugins.identityquality.v3.web.service.IdentityQualityService">
@@ -39,8 +42,16 @@
         <constructor-arg ref="identitymediation.restTransport.identity.httpAccess"/>
     </bean>
 
+    <!-- ReferentialService impl  -->
+    <bean id="identitymediation.ReferentialService" class="fr.paris.lutece.plugins.identitystore.v3.web.service.ReferentialService">
+        <constructor-arg ref="identitymediation.referential.restTransport.httpAccess"/>
+    </bean>
+
 
     <!-- Cache -->
     <bean id="identitymediation.serviceContractCache"  class="fr.paris.lutece.plugins.identitymediation.cache.ServiceContractCache"/>
+    <bean id="identitymediation.ReferentialCache"  class="fr.paris.lutece.plugins.identitymediation.cache.ReferentialCache" >
+        <constructor-arg ref="identitymediation.ReferentialService" />
+    </bean>
 
 </beans>

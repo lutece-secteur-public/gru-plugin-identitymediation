@@ -36,40 +36,38 @@ package fr.paris.lutece.plugins.identitymediation.buisness;
 import java.util.List;
 import java.util.Map;
 
-import fr.paris.lutece.plugins.identitystore.v3.web.rs.dto.common.IdentityDto;
-
 public class MediationIdentity
 {
-    private IdentityDto suspiciousIdentity;
-    private IdentityDto bestIdentity;
-    private Map<IdentityDto, List<String>> duplicatesToMergeAttributes;
+    private LocalIdentityDto suspiciousIdentity;
+    private LocalIdentityDto bestIdentity;
+    private Map<LocalIdentityDto, List<String>> duplicatesToMergeAttributes;
 
-    public IdentityDto getSuspiciousIdentity( )
+    public LocalIdentityDto getSuspiciousIdentity( )
     {
         return suspiciousIdentity;
     }
 
-    public void setSuspiciousIdentity( IdentityDto suspiciousIdentity )
+    public void setSuspiciousIdentity( LocalIdentityDto suspiciousIdentity )
     {
         this.suspiciousIdentity = suspiciousIdentity;
     }
 
-    public IdentityDto getBestIdentity( )
+    public LocalIdentityDto getBestIdentity( )
     {
         return bestIdentity;
     }
 
-    public void setBestIdentity( IdentityDto bestIdentity )
+    public void setBestIdentity( LocalIdentityDto bestIdentity )
     {
         this.bestIdentity = bestIdentity;
     }
 
-    public Map<IdentityDto, List<String>> getDuplicatesToMergeAttributes( )
+    public Map<LocalIdentityDto, List<String>> getDuplicatesToMergeAttributes( )
     {
         return duplicatesToMergeAttributes;
     }
 
-    public void setDuplicatesToMergeAttributes( Map<IdentityDto, List<String>> duplicatesToMergeAttributes )
+    public void setDuplicatesToMergeAttributes( Map<LocalIdentityDto, List<String>> duplicatesToMergeAttributes )
     {
         this.duplicatesToMergeAttributes = duplicatesToMergeAttributes;
     }
