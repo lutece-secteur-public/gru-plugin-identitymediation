@@ -33,15 +33,17 @@
                 <h3>#i18n{identitymediation.resolve_duplicates.alertMonParis.title}</h3>
                 <p class="m-0 text-body">#i18n{identitymediation.resolve_duplicates.alertMonParis.description}
                     <#if identity_to_keep.monParisActive && identity_to_merge.monParisActive>
-                    <p>#i18n{identitymediation.resolve_duplicates.cannotNotifyUsers}</p>
-                    <#elseif (!identity_to_keep.monParisActive && identity_to_keep.canNotify) || (!identity_to_merge.monParisActive && identity_to_merge.canNotify)>
-                    <a id="notify-btn" role="button" class="text-warning" data-bs-toggle="modal" data-bs-target="#notify-modal">
-                        #i18n{identitymediation.resolve_duplicates.buttonNotifyUsers}
-                    </a>
+                        <p>#i18n{identitymediation.resolve_duplicates.cannotNotifyConnectedUsers}</p>
+                    <#elseif (!identity_to_keep.monParisActive && !identity_to_keep.canNotify) || (!identity_to_merge.monParisActive && !identity_to_merge.canNotify)>
+                        <p>#i18n{identitymediation.resolve_duplicates.cannotNotifyUsers}</p>
+                    <#else>
+                        <a id="notify-btn" role="button" class="text-warning" data-bs-toggle="modal" data-bs-target="#notify-modal">
+                            #i18n{identitymediation.resolve_duplicates.buttonNotifyUsers}
+                        </a>
                     </#if>
                 </p>
             </div>
-            </#if>        
+            </#if>
             <#if service_contract??>
                 <div id="lutece-compare" class="row mt-4 position-relative shadow rounded-5 mx-1">
                     <#list [identity_to_keep, identity_to_merge] as identity>
