@@ -467,7 +467,7 @@ public class IdentityDuplicateJspBean extends AbstractIdentityDuplicateJspBean
         {
             final IdentityMergeRequest identityMergeRequest = buildMergeRequest( request );
             final IdentityMergeResponse response = _serviceIdentity.mergeIdentities( identityMergeRequest, _currentClientCode, buildAgentAuthor( ) );
-            if ( !isSuccess( response ) )
+            if ( !_mediationService.isSuccess( response ) )
             {
                 logAndDisplayStatusErrorMessage( response );
                 response.getStatus( ).getAttributeStatuses( ).forEach( as -> {
@@ -537,7 +537,7 @@ public class IdentityDuplicateJspBean extends AbstractIdentityDuplicateJspBean
         try
         {
             final SuspiciousIdentityExcludeResponse response = _serviceQuality.excludeIdentities( excludeRequest, _currentClientCode, buildAgentAuthor( ) );
-            if ( !isSuccess( response ) )
+            if ( !_mediationService.isSuccess( response ) )
             {
                 this.addError( MESSAGE_EXCLUDE_DUPLICATES_ERROR, getLocale( ) );
                 logAndDisplayStatusErrorMessage( response );

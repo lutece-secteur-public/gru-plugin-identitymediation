@@ -2,6 +2,7 @@ package fr.paris.lutece.plugins.identitymediation.web;
 
 import fr.paris.lutece.plugins.identitymediation.buisness.LocalIdentityDto;
 import fr.paris.lutece.plugins.identitymediation.buisness.MediationIdentity;
+import fr.paris.lutece.plugins.identitymediation.cache.ServiceContractCache;
 import fr.paris.lutece.plugins.identitymediation.service.MediationService;
 import fr.paris.lutece.plugins.identityquality.v3.web.service.IdentityQualityService;
 import fr.paris.lutece.plugins.identitystore.v3.web.rs.dto.common.AttributeDto;
@@ -12,7 +13,6 @@ import fr.paris.lutece.plugins.identitystore.v3.web.rs.dto.common.RequestAuthor;
 import fr.paris.lutece.plugins.identitystore.v3.web.rs.dto.common.ResponseDto;
 import fr.paris.lutece.plugins.identitystore.v3.web.rs.dto.common.ResponseStatusType;
 import fr.paris.lutece.plugins.identitystore.v3.web.rs.dto.contract.ServiceContractDto;
-import fr.paris.lutece.plugins.identitystore.v3.web.rs.dto.contract.ServiceContractSearchResponse;
 import fr.paris.lutece.plugins.identitystore.v3.web.rs.dto.crud.SuspiciousIdentityDto;
 import fr.paris.lutece.plugins.identitystore.v3.web.rs.dto.crud.SuspiciousIdentitySearchRequest;
 import fr.paris.lutece.plugins.identitystore.v3.web.rs.dto.crud.SuspiciousIdentitySearchResponse;
@@ -32,7 +32,6 @@ import fr.paris.lutece.plugins.identitystore.v3.web.rs.dto.search.IdentitySearch
 import fr.paris.lutece.plugins.identitystore.v3.web.rs.dto.search.SearchAttribute;
 import fr.paris.lutece.plugins.identitystore.v3.web.rs.util.Constants;
 import fr.paris.lutece.plugins.identitystore.v3.web.service.IdentityServiceExtended;
-import fr.paris.lutece.plugins.identitystore.v3.web.service.ServiceContractService;
 import fr.paris.lutece.plugins.identitystore.web.exception.IdentityStoreException;
 import fr.paris.lutece.portal.service.i18n.I18nService;
 import fr.paris.lutece.portal.service.spring.SpringContextService;
@@ -44,7 +43,6 @@ import org.apache.commons.lang3.StringUtils;
 import javax.servlet.http.HttpServletRequest;
 import java.sql.Timestamp;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.Date;
@@ -66,14 +64,13 @@ public class AbstractIdentityDuplicateJspBean extends MVCAdminJspBean {
 
     // Beans
     protected static final IdentityQualityService _serviceQuality = SpringContextService.getBean( "identitymediation.identityQualityService.rest.httpAccess" );
-    protected static final ServiceContractService _serviceContractService = SpringContextService.getBean( "identitymediation.serviceContract.rest.httpAccess" );
     protected static final IdentityServiceExtended _serviceIdentity = SpringContextService.getBean( "identitymediation.identityService.rest.httpAccess" );
     protected static final MediationService _mediationService = MediationService.instance();
+    protected static final ServiceContractCache _serviceContractCache = SpringContextService.getBean( "identitymediation.serviceContractCache" );
 
     // Properties
-    protected String _currentClientCode = AppPropertiesService.getProperty( "identitymediation.default.client.code" );
-    protected final List<String> _sortedAttributeKeyList = Arrays.asList( AppPropertiesService.getProperty( "identitymediation.attribute.order" ).split( "," ) );
-    protected final List<String> _attributeKeyToShowList = Arrays.asList( AppPropertiesService.getProperty( "identitymediation.attribute.show" ).split( "," ) );
+    protected static final String MEDIATION_CLIENT_CODE = AppPropertiesService.getProperty( "identitymediation.default.client.code" );
+    protected String _currentClientCode = MEDIATION_CLIENT_CODE;
     protected static final String PROPERTY_RULE_PRIORITY_MINIMUM = "identitymediation.rules.priority.minimum";
 
     // Parameters
@@ -81,6 +78,7 @@ public class AbstractIdentityDuplicateJspBean extends MVCAdminJspBean {
             Constants.PARAM_FIRST_NAME, Constants.PARAM_FAMILY_NAME, Constants.PARAM_BIRTH_DATE
     };
     final String PARAMETER_PAGE = "page";
+    final String PARAMETER_CLIENT_CODE = "client_code";
 
     // Session variable to store working values
     protected ServiceContractDto _serviceContract;
@@ -211,9 +209,9 @@ public class AbstractIdentityDuplicateJspBean extends MVCAdminJspBean {
             try
             {
                 final DuplicateRuleSummarySearchResponse response = _serviceQuality.getAllDuplicateRules( _currentClientCode, this.buildAgentAuthor( ), _rulePriorityMin );
-                if ( this.isSuccess( response ) )
+                if ( _mediationService.isSuccess( response ) )
                 {
-                    _duplicateRules.addAll( response.getDuplicateRuleSummaries( ).stream().filter( DuplicateRuleSummaryDto::isActive ).collect( Collectors.toList( ) ) );
+                    _duplicateRules.addAll( response.getDuplicateRuleSummaries( ).stream( ).filter( DuplicateRuleSummaryDto::isActive ).collect( Collectors.toList( ) ) );
                 }
                 else
                 {
@@ -235,10 +233,14 @@ public class AbstractIdentityDuplicateJspBean extends MVCAdminJspBean {
      */
     protected void initClientCode( final HttpServletRequest request )
     {
-        final String clientCode = request.getParameter( "client_code" );
+        final String clientCode = request.getParameter( PARAMETER_CLIENT_CODE );
         if ( !StringUtils.isBlank( clientCode ) )
         {
             _currentClientCode = clientCode;
+        }
+        else
+        {
+            _currentClientCode = MEDIATION_CLIENT_CODE;
         }
     }
 
@@ -252,67 +254,15 @@ public class AbstractIdentityDuplicateJspBean extends MVCAdminJspBean {
     {
         if ( _serviceContract == null )
         {
-            try
+            _serviceContract = _serviceContractCache.get( clientCode );
+            if( _serviceContract == null )
             {
-                final ServiceContractSearchResponse response = _serviceContractService.getActiveServiceContract( _currentClientCode, _currentClientCode,
-                        this.buildApplicationAuthor( ) );
-                if ( this.isSuccess( response ) && response.getServiceContract( ) != null )
-                {
-                    _serviceContract = response.getServiceContract( );
-                    this.sortServiceContractAttributes( _serviceContract );
-                    this.filterServiceContractAttributes( _serviceContract );
-                }
-                else
-                {
-                    this.logAndDisplayStatusErrorMessage( response );
-                }
-            }
-            catch( final Exception e )
-            {
-                AppLogService.error( "Error while retrieving service contract [client code = " + clientCode + "].", e );
                 this.addError( MESSAGE_GET_SERVICE_CONTRACT_ERROR, getLocale( ) );
             }
         }
     }
 
-    /**
-     * Sorts the attributes of the given ServiceContractDto based on their key names and their order of appearance in the _sortedAttributeKeyList.
-     *
-     * @param contract
-     *            The ServiceContractDto whose attributes need to be sorted.
-     */
-    protected void sortServiceContractAttributes( final ServiceContractDto contract )
-    {
-        if ( contract != null )
-        {
-            contract.getAttributeDefinitions( ).sort( ( a1, a2 ) -> {
-                final int index1 = _sortedAttributeKeyList.indexOf( a1.getKeyName( ) );
-                final int index2 = _sortedAttributeKeyList.indexOf( a2.getKeyName( ) );
-                final int i1 = index1 == -1 ? 999 : index1;
-                final int i2 = index2 == -1 ? 999 : index2;
-                if ( i1 == i2 )
-                {
-                    return a1.getKeyName( ).compareTo( a2.getKeyName( ) );
-                }
-                return Integer.compare( i1, i2 );
-            } );
-        }
-    }
 
-    /**
-     * Filters the attributes of the given ServiceContractDto based on the _attributeKeyToShowList.
-     *
-     * @param contract
-     *            The ServiceContractDto whose attributes need to be filtered.
-     */
-    protected void filterServiceContractAttributes( final ServiceContractDto contract )
-    {
-        if ( contract != null && !_attributeKeyToShowList.isEmpty( ) )
-        {
-            contract.setAttributeDefinitions( contract.getAttributeDefinitions( ).stream( ).filter( a -> _attributeKeyToShowList.contains( a.getKeyName( ) ) )
-                    .collect( Collectors.toList( ) ) );
-        }
-    }
 
     /**
      * Fetches identities that are likely to have duplicates.
@@ -349,7 +299,7 @@ public class AbstractIdentityDuplicateJspBean extends MVCAdminJspBean {
         searchRequest.setSize( 10 );
 
         final SuspiciousIdentitySearchResponse response = _serviceQuality.getSuspiciousIdentities( searchRequest, _currentClientCode, buildAgentAuthor( ) );
-        if ( this.isSuccess( response ) && response.getSuspiciousIdentities( ) != null )
+        if ( _mediationService.isSuccess( response ) && response.getSuspiciousIdentities( ) != null )
         {
             for ( final SuspiciousIdentityDto suspiciousIdentity : response.getSuspiciousIdentities( ) )
             {
@@ -407,7 +357,7 @@ public class AbstractIdentityDuplicateJspBean extends MVCAdminJspBean {
         lockRequest.setCustomerId( suspiciousIdentity.getCustomerId( ) );
         lockRequest.setLocked( true );
         final SuspiciousIdentityLockResponse response = _serviceQuality.lockIdentity( lockRequest, _currentClientCode, this.buildAgentAuthor( ) );
-        if ( !isSuccess( response ) )
+        if ( !_mediationService.isSuccess( response ) )
         {
             throw new IdentityStoreException( I18nService.getLocalizedString( response.getStatus( ).getMessageKey( ), this.getLocale( ) ) );
         }
@@ -475,7 +425,7 @@ public class AbstractIdentityDuplicateJspBean extends MVCAdminJspBean {
         if ( StringUtils.isNotBlank( customerId ) )
         {
             final IdentitySearchResponse identityResponse = _serviceIdentity.getIdentityByCustomerId( customerId, _currentClientCode, buildAgentAuthor( ) );
-            if ( this.isSuccess( identityResponse ) )
+            if ( _mediationService.isSuccess( identityResponse ) )
             {
                 if ( identityResponse.getIdentities( ).size( ) == 1 )
                 {
@@ -502,7 +452,7 @@ public class AbstractIdentityDuplicateJspBean extends MVCAdminJspBean {
     {
         final DuplicateSearchResponse response = _serviceQuality.getDuplicates( identity.getCustomerId( ), currentRuleCode, _currentClientCode,
                 this.buildAgentAuthor( ) );
-        if ( this.isSuccess( response ) && !response.getIdentities( ).isEmpty( ) )
+        if ( _mediationService.isSuccess( response ) && !response.getIdentities( ).isEmpty( ) )
         {
             return response.getIdentities( ).stream().map( LocalIdentityDto::toLocalIdentityDto )
                     .peek( localIdentityDto -> localIdentityDto.setCanNotify( _mediationService.canSendEmail( localIdentityDto ) && _mediationService.validateIdentityCertification( localIdentityDto ) ) )
@@ -689,7 +639,7 @@ public class AbstractIdentityDuplicateJspBean extends MVCAdminJspBean {
             request.setMetadata( metadata );
         }
         final IdentityHistorySearchResponse response = _serviceIdentity.searchIdentityHistory( request, _currentClientCode, buildAgentAuthor( ) );
-        if ( this.isSuccess( response ) && response.getHistories( ) != null )
+        if ( _mediationService.isSuccess( response ) && response.getHistories( ) != null )
         {
             for ( IdentityHistory h : response.getHistories( ) )
             {
@@ -717,13 +667,6 @@ public class AbstractIdentityDuplicateJspBean extends MVCAdminJspBean {
             this.logAndDisplayStatusErrorMessage( response );
         }
         return groupedAttributes;
-    }
-
-    protected boolean isSuccess( final ResponseDto apiResponse )
-    {
-        return apiResponse != null && ( apiResponse.getStatus( ).getType( ) == ResponseStatusType.SUCCESS
-                || apiResponse.getStatus( ).getType( ) == ResponseStatusType.INCOMPLETE_SUCCESS
-                || apiResponse.getStatus( ).getType( ) == ResponseStatusType.OK );
     }
 
     /**

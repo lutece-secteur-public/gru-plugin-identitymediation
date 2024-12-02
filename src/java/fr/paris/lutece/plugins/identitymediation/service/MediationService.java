@@ -4,6 +4,8 @@ import fr.paris.lutece.plugins.identitymediation.cache.ReferentialCache;
 import fr.paris.lutece.plugins.identitystore.v3.web.rs.dto.common.AttributeDto;
 import fr.paris.lutece.plugins.identitystore.v3.web.rs.dto.common.AttributeKeyDto;
 import fr.paris.lutece.plugins.identitystore.v3.web.rs.dto.common.IdentityDto;
+import fr.paris.lutece.plugins.identitystore.v3.web.rs.dto.common.ResponseDto;
+import fr.paris.lutece.plugins.identitystore.v3.web.rs.dto.common.ResponseStatusType;
 import fr.paris.lutece.plugins.identitystore.v3.web.rs.dto.referentiel.AttributeCertificationLevelDto;
 import fr.paris.lutece.plugins.identitystore.v3.web.rs.dto.referentiel.AttributeCertificationProcessusDto;
 import fr.paris.lutece.plugins.identitystore.v3.web.rs.util.Constants;
@@ -32,11 +34,37 @@ public class MediationService {
         return instance;
     }
 
+    /**
+     * Check if the http response is a success or not
+     * @param apiResponse the response to be verified
+     * @return true in case of success
+     */
+    public boolean isSuccess( final ResponseDto apiResponse )
+    {
+        return apiResponse != null && ( apiResponse.getStatus( ).getType( ) == ResponseStatusType.SUCCESS
+                || apiResponse.getStatus( ).getType( ) == ResponseStatusType.INCOMPLETE_SUCCESS
+                || apiResponse.getStatus( ).getType( ) == ResponseStatusType.OK );
+    }
+
+    /**
+     * Check that the given identity has an email attribute
+     * @param identity the @{@link IdentityDto} to be verified
+     * @return true if the email @{@link AttributeDto} exists
+     */
     public boolean canSendEmail( final IdentityDto identity )
     {
         return identity.getAttributes( ).stream( ).anyMatch( attributeDto -> Objects.equals(attributeDto.getKey( ), Constants.PARAM_EMAIL ) );
     }
 
+    /**
+     * Check that the given identity has a minimum certification level according to the following rules:
+     * <ul>
+     *     <li>The identity must have all the pivot attributes filled (two possible cases, born in France or not</li>
+     *     <li>All the pivot attributes must be certified with a level greater or equal than a threshold specified through the <i>identitymediation.merge.minimum.certification</i> property </li>
+     * </ul>
+     * @param identityDto the @{@link IdentityDto} to be verified
+     * @return true if the rules are matched
+     */
     public boolean validateIdentityCertification( final IdentityDto identityDto )
     {
         try
