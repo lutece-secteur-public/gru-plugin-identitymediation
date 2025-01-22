@@ -14,6 +14,8 @@ public class AccessDuplicateResourceIdService extends ResourceIdService {
     private static final String PROPERTY_LABEL_RESOURCE_TYPE = "identitymediation.rbac.access.duplicate.label";
     private static final String PROPERTY_LABEL_READ = "identitymediation.rbac.access.duplicate.permission.read";
     private static final String PROPERTY_LABEL_WRITE = "identitymediation.rbac.access.duplicate.permission.write";
+    private static final String PROPERTY_LABEL_NOTIFICATION = "identitymediation.rbac.access.duplicate.permission.notification";
+    private static final String PROPERTY_LABEL_EXCLUDE = "identitymediation.rbac.access.duplicate.permission.exclude";
 
     @Override
     public void register() {
@@ -32,6 +34,16 @@ public class AccessDuplicateResourceIdService extends ResourceIdService {
         permWrite.setPermissionKey( AccessDuplicateResource.PERMISSION_WRITE );
         permWrite.setPermissionTitleKey( PROPERTY_LABEL_WRITE );
         rt.registerPermission( permWrite );
+
+        Permission permNotif = new Permission( );
+        permNotif.setPermissionKey( AccessDuplicateResource.PERMISSION_NOTIFICATION );
+        permNotif.setPermissionTitleKey( PROPERTY_LABEL_NOTIFICATION );
+        rt.registerPermission( permNotif );
+
+        Permission permExclude = new Permission( );
+        permExclude.setPermissionKey( AccessDuplicateResource.PERMISSION_EXCLUDE );
+        permExclude.setPermissionTitleKey( PROPERTY_LABEL_EXCLUDE );
+        rt.registerPermission( permExclude );
 
         ResourceTypeManager.registerResourceType(rt);
     }

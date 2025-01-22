@@ -10,6 +10,8 @@ public class AccessDuplicateResource implements RBACResource {
     // Perimissions
     public static final String PERMISSION_READ = "READ";
     public static final String PERMISSION_WRITE = "WRITE";
+    public static final String PERMISSION_NOTIFICATION = "NOTIFICATION";
+    public static final String PERMISSION_EXCLUDE = "EXCLUDE";
 
     @Override
     public String getResourceTypeCode() {

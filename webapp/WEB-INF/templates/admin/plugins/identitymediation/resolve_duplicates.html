@@ -17,7 +17,7 @@
                     </button>
                 </#if>
                 <button id="exclude-btn" type="button" class="btn btn-danger" data-bs-toggle="modal"
-                        data-bs-target="#exclude-modal">
+                        data-bs-target="#exclude-modal" <#if !can_exclude> disabled </#if> >
                         <i class="ti ti-x"></i> #i18n{identitymediation.resolve_duplicates.buttonExcludeDuplicate}
                 </button>
                 <@aButton
@@ -36,6 +36,8 @@
                         <p>#i18n{identitymediation.resolve_duplicates.cannotNotifyConnectedUsers}</p>
                     <#elseif (!identity_to_keep.monParisActive && !identity_to_keep.canNotify) || (!identity_to_merge.monParisActive && !identity_to_merge.canNotify)>
                         <p>#i18n{identitymediation.resolve_duplicates.cannotNotifyUsers}</p>
+                    <#elseif !can_notify>
+                        <p>#i18n{identitymediation.resolve_duplicates.cannotNotifyUsers.rights}</p>
                     <#else>
                         <a id="notify-btn" role="button" class="text-warning" data-bs-toggle="modal" data-bs-target="#notify-modal">
                             #i18n{identitymediation.resolve_duplicates.buttonNotifyUsers}

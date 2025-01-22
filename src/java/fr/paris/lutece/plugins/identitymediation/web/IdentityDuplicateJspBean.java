@@ -143,7 +143,11 @@ public class IdentityDuplicateJspBean extends AbstractIdentityDuplicateJspBean
     protected static final String MARK_DUPLICATE_LIST_BY_RULE = "duplicate_list_by_rule";
     protected static final String MARK_CUID = "cuid";
     protected static final String MARK_CODE = "code";
+    protected static final String MARK_EXCLUDE = "can_exclude";
+    protected static final String MARK_NOTIFY = "can_notify";
 
+    private boolean _canExclude = false;
+    private boolean _canNotify = false;
 
     /**
      *
@@ -413,11 +417,16 @@ public class IdentityDuplicateJspBean extends AbstractIdentityDuplicateJspBean
             return this.getSearchDuplicates( request );
         }
 
+        _canNotify = RBACService.isAuthorized( new AccessDuplicateResource( ), AccessDuplicateResource.PERMISSION_NOTIFICATION, ( User ) this.getUser( ) );
+        _canExclude = RBACService.isAuthorized( new AccessDuplicateResource( ), AccessDuplicateResource.PERMISSION_EXCLUDE, ( User ) this.getUser( ) );
+
         final Map<String, Object> model = this.populateModel( );
         model.put( MARK_CUID, _suspiciousIdentity.getCustomerId() );
         model.put( MARK_CODE, code );
         model.put( MARK_IDENTITY_TO_KEEP, _identityToKeep );
         model.put( MARK_IDENTITY_TO_MERGE, _identityToMerge );
+        model.put( MARK_NOTIFY, _canNotify );
+        model.put( MARK_EXCLUDE, _canExclude );
         Arrays.asList( PARAMETERS_DUPLICATE_SEARCH ).forEach( searchKey -> model.put( searchKey, request.getParameter( searchKey ) ) );
 
         return this.getPage( PROPERTY_PAGE_TITLE_RESOLVE_DUPLICATES, TEMPLATE_RESOLVE_DUPLICATES, model );
@@ -520,8 +529,8 @@ public class IdentityDuplicateJspBean extends AbstractIdentityDuplicateJspBean
      */
     @Action( ACTION_EXCLUDE_DUPLICATE )
     public String doExcludeDuplicate( final HttpServletRequest request ) throws AccessDeniedException {
-        if(!RBACService.isAuthorized(new AccessDuplicateResource(), AccessDuplicateResource.PERMISSION_WRITE, (User) getUser())) {
-            throw new AccessDeniedException("You don't have the right to write duplicates");
+        if(!_canExclude) {
+            throw new AccessDeniedException("You don't have the right to exclude duplicates");
         }
         final String cuidToExclude = request.getParameter( PARAMETER_CUID_TO_EXCLUDE );
 
@@ -598,6 +607,9 @@ public class IdentityDuplicateJspBean extends AbstractIdentityDuplicateJspBean
     @Action(ACTION_CREATE_IDENTITY_MERGE_TASK)
     public String doCreateIdentityMergeTask(final HttpServletRequest request) throws AccessDeniedException
     {
+        if(!_canNotify) {
+            throw new AccessDeniedException("You don't have the right to create a notification task");
+        }
         final String taskType = IdentityTaskType.ACCOUNT_IDENTITY_MERGE_REQUEST.name();
         final String customerId = request.getParameter( Constants.PARAM_ID_CUSTOMER );
         final String secondCuId = request.getParameter( Constants.METADATA_ACCOUNT_MERGE_SECOND_CUID );

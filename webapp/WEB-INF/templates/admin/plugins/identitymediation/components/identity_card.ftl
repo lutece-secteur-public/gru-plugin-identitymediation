@@ -103,7 +103,7 @@
                                             ${readableAttr.name}
                                         </div>
                                         <div class="fw-bold">
-                                            <h3 class="mb-0 fw-bold <#if index!=0 && ( !(firstIdentityAttr.value?has_content) || firstIdentityAttr.value?upper_case != attr.value?upper_case )>text-danger</#if>">
+                                            <h3 class="mb-0 fw-bold <#if index!=0 && ( !(firstIdentityAttr.value?has_content) || firstIdentityAttr.value?upper_case != attr.value!""?upper_case )>text-danger</#if>">
                                                 <#if attr.value?? && attr.value?has_content>
                                                     <#if attr.key == 'gender'>
                                                         <#if attr.value == '0'>
