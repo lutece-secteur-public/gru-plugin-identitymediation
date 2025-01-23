@@ -47,6 +47,7 @@ import java.util.Collections;
 import java.util.Comparator;
 import java.util.Date;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -473,6 +474,7 @@ public class AbstractIdentityDuplicateJspBean extends MVCAdminJspBean {
         this.initDuplicateRules(false);
 
         final Map<DuplicateRuleSummaryDto, List<LocalIdentityDto>> duplicates = new ConcurrentHashMap<>();
+        final LinkedHashMap<DuplicateRuleSummaryDto, List<LocalIdentityDto>> sortedDuplicatesByRulePriority;
 
         final CompletableFuture<Void> allOf = CompletableFuture.allOf(_duplicateRules.stream()
                 .map(rule -> CompletableFuture.runAsync(() -> {
@@ -488,13 +490,18 @@ public class AbstractIdentityDuplicateJspBean extends MVCAdminJspBean {
         try
         {
             allOf.get();
+            sortedDuplicatesByRulePriority =
+                    duplicates.entrySet()
+                              .stream()
+                              .sorted(Comparator.comparingInt(entry -> entry.getKey().getPriority()))
+                              .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue, (oldValue, newValue) -> oldValue, LinkedHashMap::new));
         }
         catch ( final InterruptedException | ExecutionException e )
         {
             throw new IdentityStoreException("Error fetching potential duplicates", e);
         }
 
-        return duplicates;
+        return sortedDuplicatesByRulePriority;
     }
 
 
