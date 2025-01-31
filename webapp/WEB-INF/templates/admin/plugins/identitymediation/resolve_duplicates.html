@@ -20,10 +20,12 @@
                         data-bs-target="#exclude-modal" <#if !can_exclude> disabled </#if> >
                         <i class="ti ti-x"></i> #i18n{identitymediation.resolve_duplicates.buttonExcludeDuplicate}
                 </button>
-                <@aButton
-                        href='jsp/admin/plugins/identitymediation/IdentityDuplicate.jsp?action=cancel&cuid=${identity_to_keep.customerId}&code=${current_rule_code}&page=${current_page}&family_name=${family_name!""}&first_name=${first_name!""}&birthdate=${birthdate!""}'
-                        class="btn btn-danger" title="#i18n{identitymediation.resolve_duplicates.buttonCancel}"
-                        buttonIcon="x" title="Annuler" />
+                <#if !only_one >
+                    <@aButton
+                            href='jsp/admin/plugins/identitymediation/IdentityDuplicate.jsp?action=cancel&cuid=${identity_to_keep.customerId}&code=${current_rule_code}&page=${current_page}&family_name=${family_name!""}&first_name=${first_name!""}&birthdate=${birthdate!""}'
+                            class="btn btn-danger" title="#i18n{identitymediation.resolve_duplicates.buttonCancel}"
+                            buttonIcon="x" title="Annuler" />
+                </#if>
             </@pageHeader>
             <@messages infos=infos />
             <@messages errors=errors />
@@ -32,12 +34,10 @@
             <div class="alert alert-warning mt-2" role="alert">
                 <h3>#i18n{identitymediation.resolve_duplicates.alertMonParis.title}</h3>
                 <p class="m-0 text-body">#i18n{identitymediation.resolve_duplicates.alertMonParis.description}
-                    <#if identity_to_keep.monParisActive && identity_to_merge.monParisActive>
-                        <p>#i18n{identitymediation.resolve_duplicates.cannotNotifyConnectedUsers}</p>
-                    <#elseif (!identity_to_keep.monParisActive && !identity_to_keep.canNotify) || (!identity_to_merge.monParisActive && !identity_to_merge.canNotify)>
-                        <p>#i18n{identitymediation.resolve_duplicates.cannotNotifyUsers}</p>
-                    <#elseif !can_notify>
+                    <#if !can_notify>
                         <p>#i18n{identitymediation.resolve_duplicates.cannotNotifyUsers.rights}</p>
+                    <#elseif !identity_to_keep.canNotify || !identity_to_merge.canNotify>
+                        <p>#i18n{identitymediation.resolve_duplicates.cannotNotifyUsers}</p>
                     <#else>
                         <a id="notify-btn" role="button" class="text-warning" data-bs-toggle="modal" data-bs-target="#notify-modal">
                             #i18n{identitymediation.resolve_duplicates.buttonNotifyUsers}

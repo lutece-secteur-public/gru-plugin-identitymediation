@@ -57,8 +57,11 @@
 				<form class="form-inline container" action="jsp/admin/plugins/identitymediation/IdentityDuplicate.jsp">
 					<input type="hidden" name="customer_id" value="${identity_to_keep.customerId}" />
 					<input type="hidden" name="account_merge_second_cuid" value="${identity_to_merge.customerId}" />
+					<input type="hidden" name="keep_connected" value="${identity_to_keep.monParisActive?c}" />
+					<input type="hidden" name="merge_connected" value="${identity_to_merge.monParisActive?c}" />
 					<input type="hidden" name="cuid" value="${cuid}" />
 					<input type="hidden" name="code" value="${code}" />
+					<input type="hidden" name="only_one" value="${only_one?c}" />
 					<input type="hidden" name="identity-cuid-1" value="${identity_to_keep.customerId}" />
 					<input type="hidden" name="identity-cuid-2" value="${identity_to_merge.customerId}" />
 					<div class="modal-header border-0">

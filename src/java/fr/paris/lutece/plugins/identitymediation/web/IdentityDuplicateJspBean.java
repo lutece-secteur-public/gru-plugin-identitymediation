@@ -61,6 +61,7 @@ import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
 
 import javax.servlet.http.HttpServletRequest;
+import java.sql.Timestamp;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -104,6 +105,7 @@ public class IdentityDuplicateJspBean extends AbstractIdentityDuplicateJspBean
     protected static final String ACTION_EXCLUDE_DUPLICATE = "excludeDuplicate";
     protected static final String ACTION_CANCEL = "cancel";
     protected static final String ACTION_CREATE_IDENTITY_MERGE_TASK = "createIdentityMergeTask";
+    protected static final String ACTION_NOTIFY_USER = "notifyUser";
 
     // Templates
     protected static final String TEMPLATE_CHOOSE_DUPLICATE_TYPE = "/admin/plugins/identitymediation/choose_duplicate_type.html";
@@ -330,6 +332,7 @@ public class IdentityDuplicateJspBean extends AbstractIdentityDuplicateJspBean
             cuidMap.put( "identity-cuid-2", identityList.get( 1 ).getCustomerId( ) );
             cuidMap.put( Constants.PARAM_RULE_CODE, _currentRuleCode );
             cuidMap.put( PARAMETER_PAGE, String.valueOf( _currentPage ) );
+            cuidMap.put( PARAMETER_ONLY_ONE_DUPLICATE, "true" );
             Arrays.asList( PARAMETERS_DUPLICATE_SEARCH ).forEach( searchKey -> cuidMap.put( searchKey, request.getParameter( searchKey ) ) );
 
             return redirect( request, VIEW_RESOLVE_DUPLICATES, cuidMap );
@@ -356,6 +359,7 @@ public class IdentityDuplicateJspBean extends AbstractIdentityDuplicateJspBean
         }
         final String _suspiciousCuid = request.getParameter( MARK_CUID );
         final String code = request.getParameter(Constants.PARAM_RULE_CODE);
+        final boolean onlyOneDuplicate = request.getParameter(PARAMETER_ONLY_ONE_DUPLICATE) != null && Boolean.parseBoolean(request.getParameter(PARAMETER_ONLY_ONE_DUPLICATE) );
 
         if ( StringUtils.isBlank(code) && _currentRuleCode == null )
         {
@@ -427,6 +431,7 @@ public class IdentityDuplicateJspBean extends AbstractIdentityDuplicateJspBean
         model.put( MARK_IDENTITY_TO_MERGE, _identityToMerge );
         model.put( MARK_NOTIFY, _canNotify );
         model.put( MARK_EXCLUDE, _canExclude );
+        model.put( PARAMETER_ONLY_ONE_DUPLICATE, onlyOneDuplicate );
         Arrays.asList( PARAMETERS_DUPLICATE_SEARCH ).forEach( searchKey -> model.put( searchKey, request.getParameter( searchKey ) ) );
 
         return this.getPage( PROPERTY_PAGE_TITLE_RESOLVE_DUPLICATES, TEMPLATE_RESOLVE_DUPLICATES, model );
@@ -610,9 +615,13 @@ public class IdentityDuplicateJspBean extends AbstractIdentityDuplicateJspBean
         if(!_canNotify) {
             throw new AccessDeniedException("You don't have the right to create a notification task");
         }
-        final String taskType = IdentityTaskType.ACCOUNT_IDENTITY_MERGE_REQUEST.name();
         final String customerId = request.getParameter( Constants.PARAM_ID_CUSTOMER );
         final String secondCuId = request.getParameter( Constants.METADATA_ACCOUNT_MERGE_SECOND_CUID );
+        final boolean firstConnected = Boolean.parseBoolean( request.getParameter( Constants.PARAM_IS_IDENTITTY_TO_KEEP_CONNECTED ) );
+        final boolean secondConnected = Boolean.parseBoolean( request.getParameter( Constants.PARAM_IS_IDENTITTY_TO_MERGE_CONNECTED ) );
+
+        final String taskType = firstConnected && secondConnected ?
+                IdentityTaskType.ACCOUNT_MERGE_REQUEST.name() : IdentityTaskType.ACCOUNT_IDENTITY_MERGE_REQUEST.name();
         try
         {
             final IdentityTaskCreateRequest identityTaskCreateRequest = new IdentityTaskCreateRequest( );
@@ -620,6 +629,7 @@ public class IdentityDuplicateJspBean extends AbstractIdentityDuplicateJspBean
             task.setTaskType( taskType );
             task.setResourceType( IdentityResourceType.CUID.name( ) );
             task.setResourceId( customerId );
+            task.setCreationDate(new Timestamp( System.currentTimeMillis( ) ) );
             final Map<String, String> metadata = new HashMap<>();
             metadata.put(Constants.METADATA_ACCOUNT_MERGE_SECOND_CUID, secondCuId);
             metadata.put(Constants.METADATA_ORIGIN, AuthorType.owner.name());

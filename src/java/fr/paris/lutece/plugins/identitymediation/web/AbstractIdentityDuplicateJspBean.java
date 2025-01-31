@@ -80,6 +80,7 @@ public class AbstractIdentityDuplicateJspBean extends MVCAdminJspBean {
     };
     final String PARAMETER_PAGE = "page";
     final String PARAMETER_CLIENT_CODE = "client_code";
+    final String PARAMETER_ONLY_ONE_DUPLICATE = "only_one";
 
     // Session variable to store working values
     protected ServiceContractDto _serviceContract;

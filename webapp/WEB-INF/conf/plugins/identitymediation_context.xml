@@ -27,6 +27,7 @@
     </bean>
     <bean id="identitymediation.referential.restTransport.httpAccess" class="fr.paris.lutece.plugins.identitystore.v3.web.rs.service.ReferentialTransportRest">
         <constructor-arg ref="identitymediation.httpAccessTransport-ids"/>
+        <constructor-arg value="${identitymediation.identityquality.endpoint.identityPath}" />
     </bean>
 
     <!-- QualityService impl -->
