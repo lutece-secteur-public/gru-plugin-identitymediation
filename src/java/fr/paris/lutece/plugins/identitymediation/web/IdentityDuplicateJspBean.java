@@ -629,7 +629,6 @@ public class IdentityDuplicateJspBean extends AbstractIdentityDuplicateJspBean
             task.setTaskType( taskType );
             task.setResourceType( IdentityResourceType.CUID.name( ) );
             task.setResourceId( customerId );
-            task.setCreationDate(new Timestamp( System.currentTimeMillis( ) ) );
             final Map<String, String> metadata = new HashMap<>();
             metadata.put(Constants.METADATA_ACCOUNT_MERGE_SECOND_CUID, secondCuId);
             metadata.put(Constants.METADATA_ORIGIN, AuthorType.owner.name());
