@@ -1,0 +1,27 @@
+<@pageContainer>
+    <@pageColumn>
+        <@pageHeader title="#i18n{identitymediation.search_all_locks.title}" />
+        <@table id="locks-table" bordered=true>
+            <thead>
+                <tr>
+                    <@th>#i18n{identitymediation.search_all_locks.cuid}</@th>
+                    <@th>#i18n{identitymediation.search_all_locks.lock_end_date}</@th>
+                    <@th>#i18n{identitymediation.search_all_locks.author.name}</@th>
+                    <@th>#i18n{identitymediation.search_all_locks.author.type}</@th>
+                </tr>
+            </thead>
+            <tbody>
+                <#if suspicious_identities_list?has_content>
+                    <#list suspicious_identities_list as identity>
+                    <tr>
+                        <@td>${identity.customerId}</@td>
+                        <@td>${identity.lock.lockEndDate}</@td>
+                        <@td>${identity.lock.author.name}</@td>
+                        <@td>${identity.lock.author.type}</@td>
+                    </tr>
+                    </#list>
+                </#if>
+            </tbody>
+        </@table>
+    </@pageColumn>
+</@pageContainer>

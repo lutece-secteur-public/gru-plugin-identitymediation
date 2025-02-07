@@ -67,7 +67,10 @@
                     </#if>
                     <#if birthdateAttr.value??>
                     <div>${birthdateAttr.value}</div>
-                  </#if>
+                    </#if>
+                    <#if mediation_identity.locked>
+                        <div><i class="ti ti-lock"></i></div>
+                    </#if>
                   <#if mediation_identity.duplicatesToMergeAttributes??>
                 </#if>
               </a>

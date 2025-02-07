@@ -41,6 +41,7 @@ public class MediationIdentity
     private LocalIdentityDto suspiciousIdentity;
     private LocalIdentityDto bestIdentity;
     private Map<LocalIdentityDto, List<String>> duplicatesToMergeAttributes;
+    private boolean locked = false;
 
     public LocalIdentityDto getSuspiciousIdentity( )
     {
@@ -70,5 +71,15 @@ public class MediationIdentity
     public void setDuplicatesToMergeAttributes( Map<LocalIdentityDto, List<String>> duplicatesToMergeAttributes )
     {
         this.duplicatesToMergeAttributes = duplicatesToMergeAttributes;
+    }
+
+    public boolean isLocked()
+    {
+        return locked;
+    }
+
+    public void setLocked(boolean locked)
+    {
+        this.locked = locked;
     }
 }

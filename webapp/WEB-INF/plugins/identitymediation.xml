@@ -28,6 +28,14 @@
             <feature-url>jsp/admin/plugins/identitymediation/IdentityDuplicate.jsp</feature-url>
             <feature-icon-url/>
         </admin-feature>
+        <admin-feature>
+            <feature-id>IDENTITYMEDIATION_LOCKS_MANAGEMENT</feature-id>
+            <feature-title>identitymediation.adminFeature.IdentityLocks.name</feature-title>
+            <feature-description>identitymediation.adminFeature.IdentityLocks.description</feature-description>
+            <feature-level>1</feature-level>
+            <feature-url>jsp/admin/plugins/identitymediation/IdentityLocks.jsp</feature-url>
+            <feature-icon-url/>
+        </admin-feature>
     </admin-features>
 
     <!-- XPages parameters -->

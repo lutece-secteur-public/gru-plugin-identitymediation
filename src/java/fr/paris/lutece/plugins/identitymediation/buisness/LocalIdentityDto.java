@@ -4,6 +4,7 @@ import fr.paris.lutece.plugins.identitystore.v3.web.rs.dto.common.IdentityDto;
 
 public class LocalIdentityDto extends IdentityDto {
     private boolean canNotify;
+    private boolean locked;
 
     public boolean isCanNotify( )
     {
@@ -13,6 +14,16 @@ public class LocalIdentityDto extends IdentityDto {
     public void setCanNotify( boolean canNotify )
     {
         this.canNotify = canNotify;
+    }
+
+    public boolean isLocked()
+    {
+        return locked;
+    }
+
+    public void setLocked(boolean locked)
+    {
+        this.locked = locked;
     }
 
     public static LocalIdentityDto toLocalIdentityDto( IdentityDto identity )
