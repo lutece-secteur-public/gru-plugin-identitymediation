@@ -62,7 +62,6 @@ public class AbstractIdentityDuplicateJspBean extends MVCAdminJspBean {
     protected static final String MESSAGE_FETCH_DUPLICATE_RULES_ERROR = "identitymediation.message.fetch_duplicate_rules.error";
     protected static final String MESSAGE_GET_SERVICE_CONTRACT_ERROR = "identitymediation.message.get_service_contract.error";
     protected static final String MESSAGE_FETCH_ERROR = "identitymediation.message.fetch.error";
-    protected static final String MESSAGE_FETCH_IDENTITY_LOCK_STATUS_ERROR = "identitymediation.message.fetch.lock.status";
 
     // Beans
     protected static final IdentityQualityService _serviceQuality = SpringContextService.getBean( "identitymediation.identityQualityService.rest.httpAccess" );
@@ -306,14 +305,9 @@ public class AbstractIdentityDuplicateJspBean extends MVCAdminJspBean {
         {
             for ( final SuspiciousIdentityDto suspiciousIdentity : response.getSuspiciousIdentities( ) )
             {
-                if(suspiciousIdentity.getLock() != null)
-                {
-                    identities.add( this.getQualifiedIdentityFromCustomerId( suspiciousIdentity.getCustomerId( ), suspiciousIdentity.getLock().isLocked() ) );
-                }
-                else
-                {
-                    identities.add( this.getQualifiedIdentityFromCustomerId( suspiciousIdentity.getCustomerId( ) ) );
-                }
+                LocalIdentityDto identity = this.getQualifiedIdentityFromCustomerId( suspiciousIdentity.getCustomerId( ) );
+                identity.setLocked(suspiciousIdentity.getLock() != null && suspiciousIdentity.getLock().isLocked());
+                identities.add(identity);
             }
             _totalPages = response.getPagination( ).getTotalPages( );
             _totalRecordByRule.replace( currentRuleCode, response.getPagination( ).getTotalRecords( ) );
@@ -441,37 +435,6 @@ public class AbstractIdentityDuplicateJspBean extends MVCAdminJspBean {
                 {
                     LocalIdentityDto localIdentityDto = LocalIdentityDto.toLocalIdentityDto(identityResponse.getIdentities().get(0));
                     localIdentityDto.setCanNotify( _mediationService.canSendEmail( localIdentityDto ) && _mediationService.validateIdentityCertification( localIdentityDto ) );
-                    localIdentityDto.setLocked(false);
-                    return localIdentityDto;
-                }
-            }
-            else
-            {
-                this.logAndDisplayStatusErrorMessage( identityResponse );
-            }
-        }
-        return null;
-    }
-
-    /**
-     * get QualifiedIdentity From CustomerId
-     *
-     * @param customerId
-     * @return the QualifiedIdentity , null otherwise
-     * @throws IdentityStoreException
-     */
-    protected LocalIdentityDto getQualifiedIdentityFromCustomerId( final String customerId, boolean locked ) throws IdentityStoreException
-    {
-        if ( StringUtils.isNotBlank( customerId ) )
-        {
-            final IdentitySearchResponse identityResponse = _serviceIdentity.getIdentityByCustomerId( customerId, _currentClientCode, buildAgentAuthor( ) );
-            if ( _mediationService.isSuccess( identityResponse ) )
-            {
-                if ( identityResponse.getIdentities( ).size( ) == 1 )
-                {
-                    LocalIdentityDto localIdentityDto = LocalIdentityDto.toLocalIdentityDto(identityResponse.getIdentities().get(0));
-                    localIdentityDto.setCanNotify( _mediationService.canSendEmail( localIdentityDto ) && _mediationService.validateIdentityCertification( localIdentityDto ) );
-                    localIdentityDto.setLocked(locked);
                     return localIdentityDto;
                 }
             }
@@ -497,7 +460,6 @@ public class AbstractIdentityDuplicateJspBean extends MVCAdminJspBean {
         {
             return response.getIdentities( ).stream().map( LocalIdentityDto::toLocalIdentityDto )
                     .peek( localIdentityDto -> localIdentityDto.setCanNotify( _mediationService.canSendEmail( localIdentityDto ) && _mediationService.validateIdentityCertification( localIdentityDto ) ) )
-                    .peek( localIdentityDto -> localIdentityDto.setLocked( this.getLockedStatus(localIdentityDto) ) )
                     .collect( Collectors.toList( ) );
         }
         if ( showError ) {
@@ -639,8 +601,6 @@ public class AbstractIdentityDuplicateJspBean extends MVCAdminJspBean {
 
             for ( final LocalIdentityDto duplicate : duplicateList )
             {
-                if(!locked)
-                    locked = duplicate.isLocked( );
 
                 if ( duplicate.equals( bestIdentity ) )
                     continue;
@@ -744,19 +704,5 @@ public class AbstractIdentityDuplicateJspBean extends MVCAdminJspBean {
                 AppLogService.error( apiResponse.getStatus( ).getMessage( ) );
             }
         }
-    }
-
-    private boolean getLockedStatus(LocalIdentityDto localIdentityDto)
-    {
-        try
-        {
-            return _serviceQuality.checkLock( localIdentityDto.getCustomerId( ), _currentClientCode,
-                    this.buildAgentAuthor( ) ).isLocked();
-        } catch (IdentityStoreException e)
-        {
-            AppLogService.error( "Error while retrieving suspicious identity lock status.", e );
-            this.addError( MESSAGE_FETCH_IDENTITY_LOCK_STATUS_ERROR, getLocale( ) );
-        }
-        return false;
     }
 }
