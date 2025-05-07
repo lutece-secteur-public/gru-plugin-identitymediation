@@ -448,13 +448,20 @@ public class IdentityDuplicateJspBean extends AbstractIdentityDuplicateJspBean
         if(!RBACService.isAuthorized(new AccessDuplicateResource(), AccessDuplicateResource.PERMISSION_WRITE, (User) getUser())) {
             throw new AccessDeniedException("You don't have the right to write duplicates");
         }
+        final String code = request.getParameter(Constants.PARAM_RULE_CODE);
         final LocalIdentityDto previouslyToKeep = _identityToKeep;
         _identityToKeep = _identityToMerge;
         _identityToMerge = previouslyToKeep;
+        final boolean onlyOneDuplicate = request.getParameter(PARAMETER_ONLY_ONE_DUPLICATE) != null && Boolean.parseBoolean(request.getParameter(PARAMETER_ONLY_ONE_DUPLICATE) );
 
         Map<String, Object> model = populateModel( );
+        model.put( MARK_CUID, _suspiciousIdentity.getCustomerId() );
+        model.put( MARK_CODE, code );
         model.put( MARK_IDENTITY_TO_KEEP, _identityToKeep );
         model.put( MARK_IDENTITY_TO_MERGE, _identityToMerge );
+        model.put( MARK_NOTIFY, _canNotify );
+        model.put( MARK_EXCLUDE, _canExclude );
+        model.put( PARAMETER_ONLY_ONE_DUPLICATE, onlyOneDuplicate );
 
         return this.getPage( PROPERTY_PAGE_TITLE_RESOLVE_DUPLICATES, TEMPLATE_RESOLVE_DUPLICATES, model );
     }

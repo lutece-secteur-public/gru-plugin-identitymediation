@@ -24,7 +24,7 @@
             <li class="position-relative d-flex justify-content-center align-items-center" style="height:155px;">
                 <div class="position-absolute top-50 start-0 end-0 bg-dark border-top border-primary-subtle mediation-line-merge" style="z-index:-1"></div>
                 <div class="text-center w-100">
-                    <a href="jsp/admin/plugins/identitymediation/IdentityDuplicate.jsp?action_swapIdentities&cuid=${identity_to_keep.customerId}&code=${current_rule_code}&page=${current_page}&identity-cuid-1=${identity_to_keep.customerId}&identity-cuid-2=${identity_to_merge.customerId}" class="btn btn-rounded border-primary-subtle btn-light m-auto mediation-btn-merge" data-bs-toggle="tooltip" data-bs-placement="top" title="Inverser">
+                    <a href="jsp/admin/plugins/identitymediation/IdentityDuplicate.jsp?action_swapIdentities&cuid=${identity_to_keep.customerId}&code=${current_rule_code}&page=${current_page}&identity-cuid-1=${identity_to_keep.customerId}&identity-cuid-2=${identity_to_merge.customerId}&only_one=${only_one?c}" class="btn btn-rounded border-primary-subtle btn-light m-auto mediation-btn-merge" data-bs-toggle="tooltip" data-bs-placement="top" title="Inverser">
                         <i class="ti ti-switch-horizontal"></i>
                     </a>
                 </div>
