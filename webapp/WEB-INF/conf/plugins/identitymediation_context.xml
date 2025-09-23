@@ -5,28 +5,31 @@
        xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans.xsd" >
 
     <!-- IHttpTransportProvider declarations -->
-    <bean id="identitymediation.httpAccessTransport-ids" class="fr.paris.lutece.plugins.identitystore.v3.web.rs.service.HttpAccessTransport" >
-        <property name="apiEndPointUrl">
-            <value>${identitymediation.identityquality.endpoint}</value>
+    
+    
+    <bean id="identitymediation.httpAccessTransport" class="fr.paris.lutece.plugins.identitystore.v3.web.rs.service.HttpApiManagerAccessTransport" >
+	<property name="ApiEndPointUrl">
+            <value>${identitymediation.identitystore.apiEndPointUrl}</value>
         </property>
-    </bean>
-    <bean id="identitymediation.httpAccessTransport-idm" class="fr.paris.lutece.plugins.identityquality.v3.web.rs.service.HttpAccessTransport" >
-        <property name="apiEndPointUrl">
-            <value>${identitymediation.identityquality.endpoint}</value>
+	<property name="AccessManagerEndPointUrl">
+            <value>${identitymediation.identitystore.accessManagerEndPointUrl}</value>
         </property>
-    </bean>
+	<property name="AccessManagerCredentials">
+            <value>${identitymediation.identitystore.accessManagerCredentials}</value>
+        </property>
+     </bean>
 
     <bean id="identitymediation.restTransport.httpAccess" class="fr.paris.lutece.plugins.identityquality.v3.web.rs.service.IdentityQualityTransportRest">
-        <constructor-arg ref="identitymediation.httpAccessTransport-idm" />
+        <constructor-arg ref="identitymediation.httpAccessTransport" />
     </bean>
     <bean id="identitymediation.restTransport.serviceContract.httpAccess" class="fr.paris.lutece.plugins.identitystore.v3.web.rs.service.ServiceContractTransportRest">
-        <constructor-arg ref="identitymediation.httpAccessTransport-ids" />
+        <constructor-arg ref="identitymediation.httpAccessTransport" />
     </bean>
     <bean id="identitymediation.restTransport.identity.httpAccess" class="fr.paris.lutece.plugins.identitystore.v3.web.rs.service.IdentityTransportRest">
-        <constructor-arg ref="identitymediation.httpAccessTransport-ids" />
+        <constructor-arg ref="identitymediation.httpAccessTransport" />
     </bean>
     <bean id="identitymediation.referential.restTransport.httpAccess" class="fr.paris.lutece.plugins.identitystore.v3.web.rs.service.ReferentialTransportRest">
-        <constructor-arg ref="identitymediation.httpAccessTransport-ids"/>
+        <constructor-arg ref="identitymediation.httpAccessTransport"/>
     </bean>
 
     <!-- QualityService impl -->
