@@ -103,7 +103,7 @@
                                             ${readableAttr.name}
                                         </div>
                                         <div class="fw-bold">
-                                            <h3 class="mb-0 fw-bold <#if index!=0 && ( !(firstIdentityAttr.value?has_content) || firstIdentityAttr.value?upper_case != attr.value!""?upper_case )>text-danger</#if>">
+                                             <h3 class="mb-0 fw-bold <#if index!=0 && ( !(firstIdentityAttr.value?has_content) || normalize(firstIdentityAttr.value) != normalize(attr.value!"") )>text-danger</#if>">
                                                 <#if attr.value?? && attr.value?has_content>
                                                     <#if attr.key == 'gender'>
                                                         <#if attr.value == '0'>
@@ -141,7 +141,7 @@
                                 </#list>
                             <#else>
                                 <div class="flex-1 flex-grow-1 py-2 px-3 text-break">
-                                    <div class="small-title">
+                                    <div class="opacity-50">
                                         ${readableAttr.name}
                                     </div>
                                     <h3 class="mb-0 fw-bold"><span class="text-warning">Inexistant</span></h3>
@@ -180,3 +180,12 @@
         </div>
     </#if>
 </#macro>
+
+<#function normalize str>
+    <#return str?trim?lower_case?replace('é','e')?replace('è','e')?replace('ê','e')?replace('ë','e')
+                                ?replace('à','a')?replace('â','a')?replace('ä','a')
+                                ?replace('ù','u')?replace('û','u')?replace('ü','u')
+                                ?replace('ô','o')?replace('ö','o')
+                                ?replace('î','i')?replace('ï','i')
+                                ?replace('ç','c') >
+</#function>
