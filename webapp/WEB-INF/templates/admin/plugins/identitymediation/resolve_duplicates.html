@@ -10,11 +10,17 @@
     <@pageColumn id="mediation-resolve" class="pt-xl-4 px-xl-5 bg-secondary ">
         <div class="container">
             <@pageHeader title="#i18n{identitymediation.resolve_duplicates.pageTitle}">
-                <#if !identity_to_keep.monParisActive && !identity_to_merge.monParisActive>
+                <#if can_merge && !identity_to_keep.monParisActive && !identity_to_merge.monParisActive>
                     <button id="merge-btn" type="button" class="btn btn-primary" data-bs-toggle="modal"
                             data-bs-target="#merge-modal">
                         #i18n{identitymediation.resolve_duplicates.buttonMergeDuplicate}
                     </button>
+                <#else>
+                    <span class="d-inline-block" tabindex="0" data-bs-toggle="tooltip" data-bs-placement="bottom" data-bs-html="true" title="<small>#i18n{identitymediation.resolve_duplicates.buttonMergeDuplicate.forbidden}</small>">
+                        <button class="btn btn-primary" type="button" disabled>
+                            #i18n{identitymediation.resolve_duplicates.buttonMergeDuplicate}
+                        </button>
+                    </span>
                 </#if>
                 <button id="exclude-btn" type="button" class="btn btn-danger" data-bs-toggle="modal"
                         data-bs-target="#exclude-modal" <#if !can_exclude> disabled </#if> >
@@ -30,7 +36,7 @@
             <@messages infos=infos />
             <@messages errors=errors />
             <@messages warnings=warnings />
-            <#if identity_to_keep.monParisActive || identity_to_merge.monParisActive>
+            <#if !can_merge || identity_to_keep.monParisActive || identity_to_merge.monParisActive>
             <div class="alert alert-warning mt-2" role="alert">
                 <h3>#i18n{identitymediation.resolve_duplicates.alertMonParis.title}</h3>
                 <p class="m-0 text-body">#i18n{identitymediation.resolve_duplicates.alertMonParis.description}

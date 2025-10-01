@@ -69,7 +69,11 @@
 						<button type="button" class="btn btn-rounded border position-absolute end-0 me-3 top-0 mt-3" data-bs-dismiss="modal" aria-label="Close">x</button>
 					</div>
 					<div class="modal-body text-center border-0 pt-0">
-						#i18n{identitymediation.resolve_duplicates.notify_users.description}
+						<p>#i18n{identitymediation.resolve_duplicates.notify_users.description}</p>
+						<#if last_notif??>
+							<p class="text-danger fw-bold">#i18n{identitymediation.resolve_duplicates.notify_users.description.resend.warning}</p>
+							<p class="text-danger fw-bold">#i18n{identitymediation.resolve_duplicates.notify_users.description.last.notif.date} ${last_notif.creationDate?string["dd/MM/yyyy HH:mm:ss"]}</p>
+						</#if>
 					</div>
 					<div class="modal-footer justify-content-center pb-4 pt-0 border-0">
 						<button class="btn btn-primary" name="action_createIdentityMergeTask">#i18n{identitymediation.resolve_duplicates.notify_users.buttonNotify}</button>
