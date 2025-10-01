@@ -644,8 +644,8 @@ public class IdentityDuplicateJspBean extends AbstractIdentityDuplicateJspBean
         final boolean firstConnected = Boolean.parseBoolean( request.getParameter( Constants.PARAM_IS_IDENTITTY_TO_KEEP_CONNECTED ) );
         final boolean secondConnected = Boolean.parseBoolean( request.getParameter( Constants.PARAM_IS_IDENTITTY_TO_MERGE_CONNECTED ) );
 
-        final String taskType = firstConnected && secondConnected ?
-                IdentityTaskType.ACCOUNT_MERGE_REQUEST.name() : IdentityTaskType.ACCOUNT_IDENTITY_MERGE_REQUEST.name();
+        final String taskType = firstConnected && !secondConnected ?
+                IdentityTaskType.ACCOUNT_IDENTITY_MERGE_REQUEST.name() : IdentityTaskType.ACCOUNT_MERGE_REQUEST.name();
         try
         {
             final IdentityTaskCreateRequest identityTaskCreateRequest = new IdentityTaskCreateRequest( );
@@ -690,8 +690,8 @@ public class IdentityDuplicateJspBean extends AbstractIdentityDuplicateJspBean
             final List<IdentityTaskDto> tasks = response.getTasks();
             if ( tasks != null && !tasks.isEmpty( ) )
             {
-                final String taskType = _identityToKeep.isMonParisActive() && _identityToMerge.isMonParisActive() ?
-                                        IdentityTaskType.ACCOUNT_MERGE_REQUEST.name() : IdentityTaskType.ACCOUNT_IDENTITY_MERGE_REQUEST.name();
+                final String taskType = _identityToKeep.isMonParisActive() && !_identityToMerge.isMonParisActive() ?
+                                        IdentityTaskType.ACCOUNT_IDENTITY_MERGE_REQUEST.name() : IdentityTaskType.ACCOUNT_MERGE_REQUEST.name();
                 final List<IdentityTaskDto> filteredTasks = tasks.stream()
                              .filter(t -> t.getTaskStatus() == IdentityTaskStatusType.TODO || t.getTaskStatus() == IdentityTaskStatusType.IN_PROGRESS)
                              .filter(t -> t.getMetadata().containsKey(Constants.METADATA_ACCOUNT_MERGE_SECOND_CUID) && t.getMetadata().get(Constants.METADATA_ACCOUNT_MERGE_SECOND_CUID).equals(_identityToMerge.getCustomerId()))
