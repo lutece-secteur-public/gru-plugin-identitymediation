@@ -47,6 +47,8 @@ import fr.paris.lutece.plugins.identitystore.v3.web.rs.dto.task.IdentityResource
 import fr.paris.lutece.plugins.identitystore.v3.web.rs.dto.task.IdentityTaskCreateRequest;
 import fr.paris.lutece.plugins.identitystore.v3.web.rs.dto.task.IdentityTaskCreateResponse;
 import fr.paris.lutece.plugins.identitystore.v3.web.rs.dto.task.IdentityTaskDto;
+import fr.paris.lutece.plugins.identitystore.v3.web.rs.dto.task.IdentityTaskListGetResponse;
+import fr.paris.lutece.plugins.identitystore.v3.web.rs.dto.task.IdentityTaskStatusType;
 import fr.paris.lutece.plugins.identitystore.v3.web.rs.dto.task.IdentityTaskType;
 import fr.paris.lutece.plugins.identitystore.v3.web.rs.util.Constants;
 import fr.paris.lutece.plugins.identitystore.web.exception.IdentityStoreException;
@@ -54,6 +56,7 @@ import fr.paris.lutece.portal.service.admin.AccessDeniedException;
 import fr.paris.lutece.portal.service.i18n.I18nService;
 import fr.paris.lutece.portal.service.rbac.RBACService;
 import fr.paris.lutece.portal.service.util.AppLogService;
+import fr.paris.lutece.portal.service.util.AppPropertiesService;
 import fr.paris.lutece.portal.util.mvc.admin.annotations.Controller;
 import fr.paris.lutece.portal.util.mvc.commons.annotations.Action;
 import fr.paris.lutece.portal.util.mvc.commons.annotations.View;
@@ -61,10 +64,10 @@ import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
 
 import javax.servlet.http.HttpServletRequest;
-import java.sql.Timestamp;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -120,6 +123,8 @@ public class IdentityDuplicateJspBean extends AbstractIdentityDuplicateJspBean
     protected static final String PROPERTY_PAGE_TITLE_SELECT_IDENTITIES = "identitymediation.select_identities.pageTitle";
     protected static final String PROPERTY_PAGE_TITLE_RESOLVE_DUPLICATES = "identitymediation.resolve_duplicates.pageTitle";
 
+    // Properties
+    protected static final String PROPERTY_MERGE_RULE_CODES = "identitymediation.merge.rule.codes";
 
     // Parameters
     protected final String PARAMETER_CUID_PINNED = "cuid_pinned";
@@ -147,9 +152,13 @@ public class IdentityDuplicateJspBean extends AbstractIdentityDuplicateJspBean
     protected static final String MARK_CODE = "code";
     protected static final String MARK_EXCLUDE = "can_exclude";
     protected static final String MARK_NOTIFY = "can_notify";
+    protected static final String MARK_CAN_MERGE = "can_merge";
+    protected static final String MARK_LAST_NOTIF = "last_notif";
 
     private boolean _canExclude = false;
     private boolean _canNotify = false;
+    private boolean _canMerge = false;
+    private IdentityTaskDto _lastNotif = null;
 
     /**
      *
@@ -353,7 +362,7 @@ public class IdentityDuplicateJspBean extends AbstractIdentityDuplicateJspBean
      * @return the html code of the form
      */
     @View( value = VIEW_RESOLVE_DUPLICATES )
-    public String getResolveDuplicates( final HttpServletRequest request ) throws AccessDeniedException {
+    public String getResolveDuplicates( final HttpServletRequest request ) throws AccessDeniedException, IdentityStoreException {
         if( !RBACService.isAuthorized( new AccessDuplicateResource( ), AccessDuplicateResource.PERMISSION_WRITE, ( User ) getUser( ) ) ) {
             throw new AccessDeniedException("You don't have the right to write duplicates");
         }
@@ -423,6 +432,9 @@ public class IdentityDuplicateJspBean extends AbstractIdentityDuplicateJspBean
 
         _canNotify = RBACService.isAuthorized( new AccessDuplicateResource( ), AccessDuplicateResource.PERMISSION_NOTIFICATION, ( User ) this.getUser( ) );
         _canExclude = RBACService.isAuthorized( new AccessDuplicateResource( ), AccessDuplicateResource.PERMISSION_EXCLUDE, ( User ) this.getUser( ) );
+        _canMerge = Arrays.stream(AppPropertiesService.getProperty(PROPERTY_MERGE_RULE_CODES).split(",")).anyMatch(rule -> code.equalsIgnoreCase( rule ) );
+
+        verifyExistingTasks();
 
         final Map<String, Object> model = this.populateModel( );
         model.put( MARK_CUID, _suspiciousIdentity.getCustomerId() );
@@ -431,6 +443,8 @@ public class IdentityDuplicateJspBean extends AbstractIdentityDuplicateJspBean
         model.put( MARK_IDENTITY_TO_MERGE, _identityToMerge );
         model.put( MARK_NOTIFY, _canNotify );
         model.put( MARK_EXCLUDE, _canExclude );
+        model.put( MARK_CAN_MERGE, _canMerge );
+        model.put( MARK_LAST_NOTIF, _lastNotif );
         model.put( PARAMETER_ONLY_ONE_DUPLICATE, onlyOneDuplicate );
         Arrays.asList( PARAMETERS_DUPLICATE_SEARCH ).forEach( searchKey -> model.put( searchKey, request.getParameter( searchKey ) ) );
 
@@ -444,7 +458,7 @@ public class IdentityDuplicateJspBean extends AbstractIdentityDuplicateJspBean
      * @return the view
      */
     @Action( ACTION_SWAP_IDENTITIES )
-    public String doSwapIdentities( final HttpServletRequest request ) throws AccessDeniedException {
+    public String doSwapIdentities( final HttpServletRequest request ) throws AccessDeniedException, IdentityStoreException {
         if(!RBACService.isAuthorized(new AccessDuplicateResource(), AccessDuplicateResource.PERMISSION_WRITE, (User) getUser())) {
             throw new AccessDeniedException("You don't have the right to write duplicates");
         }
@@ -454,6 +468,8 @@ public class IdentityDuplicateJspBean extends AbstractIdentityDuplicateJspBean
         _identityToMerge = previouslyToKeep;
         final boolean onlyOneDuplicate = request.getParameter(PARAMETER_ONLY_ONE_DUPLICATE) != null && Boolean.parseBoolean(request.getParameter(PARAMETER_ONLY_ONE_DUPLICATE) );
 
+        verifyExistingTasks();
+
         Map<String, Object> model = populateModel( );
         model.put( MARK_CUID, _suspiciousIdentity.getCustomerId() );
         model.put( MARK_CODE, code );
@@ -461,6 +477,8 @@ public class IdentityDuplicateJspBean extends AbstractIdentityDuplicateJspBean
         model.put( MARK_IDENTITY_TO_MERGE, _identityToMerge );
         model.put( MARK_NOTIFY, _canNotify );
         model.put( MARK_EXCLUDE, _canExclude );
+        model.put( MARK_CAN_MERGE, _canMerge );
+        model.put( MARK_LAST_NOTIF, _lastNotif );
         model.put( PARAMETER_ONLY_ONE_DUPLICATE, onlyOneDuplicate );
 
         return this.getPage( PROPERTY_PAGE_TITLE_RESOLVE_DUPLICATES, TEMPLATE_RESOLVE_DUPLICATES, model );
@@ -477,7 +495,7 @@ public class IdentityDuplicateJspBean extends AbstractIdentityDuplicateJspBean
         if(!RBACService.isAuthorized(new AccessDuplicateResource(), AccessDuplicateResource.PERMISSION_WRITE, (User) getUser())) {
             throw new AccessDeniedException("You don't have the right to write duplicates");
         }
-        if ( _identityToKeep == null || _identityToMerge == null || _identityToMerge.equals( _identityToKeep ) )
+        if ( !_canMerge || _identityToKeep == null || _identityToMerge == null || _identityToMerge.equals( _identityToKeep ) )
         {
             this.addError( MESSAGE_MERGE_DUPLICATES_ERROR, getLocale( ) );
             _identityToKeep = null;
@@ -617,8 +635,7 @@ public class IdentityDuplicateJspBean extends AbstractIdentityDuplicateJspBean
      * @throws AccessDeniedException
      */
     @Action(ACTION_CREATE_IDENTITY_MERGE_TASK)
-    public String doCreateIdentityMergeTask(final HttpServletRequest request) throws AccessDeniedException
-    {
+    public String doCreateIdentityMergeTask(final HttpServletRequest request) throws AccessDeniedException, IdentityStoreException {
         if(!_canNotify) {
             throw new AccessDeniedException("You don't have the right to create a notification task");
         }
@@ -661,6 +678,31 @@ public class IdentityDuplicateJspBean extends AbstractIdentityDuplicateJspBean
         }
 
         return getResolveDuplicates( request );
+    }
+
+    private void verifyExistingTasks( ) throws IdentityStoreException
+    {
+        _lastNotif = null;
+        final IdentityTaskListGetResponse response =
+                _serviceIdentity.getIdentityTaskList(_identityToKeep.getCustomerId(), IdentityResourceType.CUID.name( ), _currentClientCode, this.buildAgentAuthor( ) );
+        if ( response != null )
+        {
+            final List<IdentityTaskDto> tasks = response.getTasks();
+            if ( tasks != null && !tasks.isEmpty( ) )
+            {
+                final String taskType = _identityToKeep.isMonParisActive() && _identityToMerge.isMonParisActive() ?
+                                        IdentityTaskType.ACCOUNT_MERGE_REQUEST.name() : IdentityTaskType.ACCOUNT_IDENTITY_MERGE_REQUEST.name();
+                final List<IdentityTaskDto> filteredTasks = tasks.stream()
+                             .filter(t -> t.getTaskStatus() == IdentityTaskStatusType.TODO || t.getTaskStatus() == IdentityTaskStatusType.IN_PROGRESS)
+                             .filter(t -> t.getMetadata().containsKey(Constants.METADATA_ACCOUNT_MERGE_SECOND_CUID) && t.getMetadata().get(Constants.METADATA_ACCOUNT_MERGE_SECOND_CUID).equals(_identityToMerge.getCustomerId()))
+                             .filter(t -> t.getTaskType().equals(taskType))
+                             .collect(Collectors.toList());
+                if ( !filteredTasks.isEmpty( ) )
+                {
+                    _lastNotif = filteredTasks.stream().max(Comparator.comparing(IdentityTaskDto::getCreationDate)).orElse(null);
+                }
+            }
+        }
     }
 
     /**
