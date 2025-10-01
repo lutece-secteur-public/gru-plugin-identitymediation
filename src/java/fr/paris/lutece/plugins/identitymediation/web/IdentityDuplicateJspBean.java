@@ -124,7 +124,7 @@ public class IdentityDuplicateJspBean extends AbstractIdentityDuplicateJspBean
     protected static final String PROPERTY_PAGE_TITLE_RESOLVE_DUPLICATES = "identitymediation.resolve_duplicates.pageTitle";
 
     // Properties
-    protected static final String PROPERTY_MERGE_RULE_CODES = "identitymediation.merge.rule.codes";
+    protected static final String PROPERTY_MERGE_RULE_CODES_FOR_CREATE_TASK = "identitymediation.merge.rule.codes.for.create.task";
 
     // Parameters
     protected final String PARAMETER_CUID_PINNED = "cuid_pinned";
@@ -152,12 +152,12 @@ public class IdentityDuplicateJspBean extends AbstractIdentityDuplicateJspBean
     protected static final String MARK_CODE = "code";
     protected static final String MARK_EXCLUDE = "can_exclude";
     protected static final String MARK_NOTIFY = "can_notify";
-    protected static final String MARK_CAN_MERGE = "can_merge";
+    protected static final String MARK_RULE_ALLOWING_NOTIFY = "rule_allowing_notify";
     protected static final String MARK_LAST_NOTIF = "last_notif";
 
     private boolean _canExclude = false;
     private boolean _canNotify = false;
-    private boolean _canMerge = false;
+    private boolean _ruleAllowingNotify = false;
     private IdentityTaskDto _lastNotif = null;
 
     /**
@@ -432,7 +432,7 @@ public class IdentityDuplicateJspBean extends AbstractIdentityDuplicateJspBean
 
         _canNotify = RBACService.isAuthorized( new AccessDuplicateResource( ), AccessDuplicateResource.PERMISSION_NOTIFICATION, ( User ) this.getUser( ) );
         _canExclude = RBACService.isAuthorized( new AccessDuplicateResource( ), AccessDuplicateResource.PERMISSION_EXCLUDE, ( User ) this.getUser( ) );
-        _canMerge = Arrays.stream(AppPropertiesService.getProperty(PROPERTY_MERGE_RULE_CODES).split(",")).anyMatch(rule -> code.equalsIgnoreCase( rule ) );
+        _ruleAllowingNotify = Arrays.stream(AppPropertiesService.getProperty(PROPERTY_MERGE_RULE_CODES_FOR_CREATE_TASK).split(",")).anyMatch(rule -> code.equalsIgnoreCase(rule));
 
         verifyExistingTasks();
 
@@ -443,7 +443,7 @@ public class IdentityDuplicateJspBean extends AbstractIdentityDuplicateJspBean
         model.put( MARK_IDENTITY_TO_MERGE, _identityToMerge );
         model.put( MARK_NOTIFY, _canNotify );
         model.put( MARK_EXCLUDE, _canExclude );
-        model.put( MARK_CAN_MERGE, _canMerge );
+        model.put( MARK_RULE_ALLOWING_NOTIFY, _ruleAllowingNotify );
         model.put( MARK_LAST_NOTIF, _lastNotif );
         model.put( PARAMETER_ONLY_ONE_DUPLICATE, onlyOneDuplicate );
         Arrays.asList( PARAMETERS_DUPLICATE_SEARCH ).forEach( searchKey -> model.put( searchKey, request.getParameter( searchKey ) ) );
@@ -477,7 +477,7 @@ public class IdentityDuplicateJspBean extends AbstractIdentityDuplicateJspBean
         model.put( MARK_IDENTITY_TO_MERGE, _identityToMerge );
         model.put( MARK_NOTIFY, _canNotify );
         model.put( MARK_EXCLUDE, _canExclude );
-        model.put( MARK_CAN_MERGE, _canMerge );
+        model.put( MARK_RULE_ALLOWING_NOTIFY, _ruleAllowingNotify );
         model.put( MARK_LAST_NOTIF, _lastNotif );
         model.put( PARAMETER_ONLY_ONE_DUPLICATE, onlyOneDuplicate );
 
@@ -495,7 +495,7 @@ public class IdentityDuplicateJspBean extends AbstractIdentityDuplicateJspBean
         if(!RBACService.isAuthorized(new AccessDuplicateResource(), AccessDuplicateResource.PERMISSION_WRITE, (User) getUser())) {
             throw new AccessDeniedException("You don't have the right to write duplicates");
         }
-        if ( !_canMerge || _identityToKeep == null || _identityToMerge == null || _identityToMerge.equals( _identityToKeep ) )
+        if ( _identityToKeep == null || _identityToMerge == null || _identityToMerge.equals( _identityToKeep ) )
         {
             this.addError( MESSAGE_MERGE_DUPLICATES_ERROR, getLocale( ) );
             _identityToKeep = null;
@@ -638,6 +638,9 @@ public class IdentityDuplicateJspBean extends AbstractIdentityDuplicateJspBean
     public String doCreateIdentityMergeTask(final HttpServletRequest request) throws AccessDeniedException, IdentityStoreException {
         if(!_canNotify) {
             throw new AccessDeniedException("You don't have the right to create a notification task");
+        }
+        if(!_ruleAllowingNotify) {
+            throw new AccessDeniedException("Creation of a notification task denied : the rule that has detected those duplicates doesn't allow it");
         }
         final String customerId = request.getParameter( Constants.PARAM_ID_CUSTOMER );
         final String secondCuId = request.getParameter( Constants.METADATA_ACCOUNT_MERGE_SECOND_CUID );
