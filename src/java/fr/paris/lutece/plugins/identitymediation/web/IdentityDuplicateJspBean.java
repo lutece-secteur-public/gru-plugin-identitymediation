@@ -90,10 +90,12 @@ public class IdentityDuplicateJspBean extends AbstractIdentityDuplicateJspBean
     protected static final String MESSAGE_FETCH_DUPLICATES_ERROR = "identitymediation.message.fetch_duplicates.error";
     protected static final String MESSAGE_MERGE_DUPLICATES_SUCCESS = "identitymediation.message.merge_duplicates.success";
     protected static final String MESSAGE_MERGE_DUPLICATES_ERROR = "identitymediation.message.merge_duplicates.error";
+    protected static final String MESSAGE_MERGE_DUPLICATES_FORBIDDEN = "identitymediation.message.merge_duplicates.forbidden";
     protected static final String MESSAGE_EXCLUDE_DUPLICATES_SUCCESS = "identitymediation.message.exclude_duplicates.success";
     protected static final String MESSAGE_EXCLUDE_DUPLICATES_ERROR = "identitymediation.message.exclude_duplicates.error";
     protected static final String MESSAGE_ACCOUNT_IDENTITY_MERGE = "identitymediation.message.account_identity_merge";
     protected static final String MESSAGE_ACCOUNT_IDENTITY_MERGE_ERROR = "identitymediation.message.account_identity_merge.error";
+    protected static final String MESSAGE_CREATE_TASK_FORBIDDEN =  "identitymediation.message.create.task.forbidden";
 
     // Views
     protected static final String VIEW_CHOOSE_DUPLICATE_TYPE = "chooseDuplicateType";
@@ -150,14 +152,12 @@ public class IdentityDuplicateJspBean extends AbstractIdentityDuplicateJspBean
     protected static final String MARK_DUPLICATE_LIST_BY_RULE = "duplicate_list_by_rule";
     protected static final String MARK_CUID = "cuid";
     protected static final String MARK_CODE = "code";
-    protected static final String MARK_EXCLUDE = "can_exclude";
-    protected static final String MARK_NOTIFY = "can_notify";
-    protected static final String MARK_RULE_ALLOWING_NOTIFY = "rule_allowing_notify";
+    protected static final String MARK_CAN_EXCLUDE = "can_exclude";
+    protected static final String MARK_CAN_CREATE_TASK = "can_create_task";
+    protected static final String MARK_CAN_MERGE = "can_merge";
     protected static final String MARK_LAST_NOTIF = "last_notif";
 
-    private boolean _canExclude = false;
-    private boolean _canNotify = false;
-    private boolean _ruleAllowingNotify = false;
+    private final List<String> _rulesAllowingTaskCreation = Arrays.stream(AppPropertiesService.getProperty(PROPERTY_MERGE_RULE_CODES_FOR_CREATE_TASK).split(",")).collect(Collectors.toList());
     private IdentityTaskDto _lastNotif = null;
 
     /**
@@ -430,10 +430,6 @@ public class IdentityDuplicateJspBean extends AbstractIdentityDuplicateJspBean
             return this.getSearchDuplicates( request );
         }
 
-        _canNotify = RBACService.isAuthorized( new AccessDuplicateResource( ), AccessDuplicateResource.PERMISSION_NOTIFICATION, ( User ) this.getUser( ) );
-        _canExclude = RBACService.isAuthorized( new AccessDuplicateResource( ), AccessDuplicateResource.PERMISSION_EXCLUDE, ( User ) this.getUser( ) );
-        _ruleAllowingNotify = Arrays.stream(AppPropertiesService.getProperty(PROPERTY_MERGE_RULE_CODES_FOR_CREATE_TASK).split(",")).anyMatch(rule -> code.equalsIgnoreCase(rule));
-
         verifyExistingTasks();
 
         final Map<String, Object> model = this.populateModel( );
@@ -441,9 +437,9 @@ public class IdentityDuplicateJspBean extends AbstractIdentityDuplicateJspBean
         model.put( MARK_CODE, code );
         model.put( MARK_IDENTITY_TO_KEEP, _identityToKeep );
         model.put( MARK_IDENTITY_TO_MERGE, _identityToMerge );
-        model.put( MARK_NOTIFY, _canNotify );
-        model.put( MARK_EXCLUDE, _canExclude );
-        model.put( MARK_RULE_ALLOWING_NOTIFY, _ruleAllowingNotify );
+        model.put( MARK_CAN_CREATE_TASK, canCreateMergeTask());
+        model.put( MARK_CAN_EXCLUDE, canExclude());
+        model.put( MARK_CAN_MERGE, canMerge() );
         model.put( MARK_LAST_NOTIF, _lastNotif );
         model.put( PARAMETER_ONLY_ONE_DUPLICATE, onlyOneDuplicate );
         Arrays.asList( PARAMETERS_DUPLICATE_SEARCH ).forEach( searchKey -> model.put( searchKey, request.getParameter( searchKey ) ) );
@@ -475,9 +471,9 @@ public class IdentityDuplicateJspBean extends AbstractIdentityDuplicateJspBean
         model.put( MARK_CODE, code );
         model.put( MARK_IDENTITY_TO_KEEP, _identityToKeep );
         model.put( MARK_IDENTITY_TO_MERGE, _identityToMerge );
-        model.put( MARK_NOTIFY, _canNotify );
-        model.put( MARK_EXCLUDE, _canExclude );
-        model.put( MARK_RULE_ALLOWING_NOTIFY, _ruleAllowingNotify );
+        model.put( MARK_CAN_CREATE_TASK, canCreateMergeTask());
+        model.put( MARK_CAN_EXCLUDE, canExclude());
+        model.put( MARK_CAN_MERGE, canMerge() );
         model.put( MARK_LAST_NOTIF, _lastNotif );
         model.put( PARAMETER_ONLY_ONE_DUPLICATE, onlyOneDuplicate );
 
@@ -494,6 +490,12 @@ public class IdentityDuplicateJspBean extends AbstractIdentityDuplicateJspBean
     public String doMergeDuplicate( final HttpServletRequest request ) throws AccessDeniedException {
         if(!RBACService.isAuthorized(new AccessDuplicateResource(), AccessDuplicateResource.PERMISSION_WRITE, (User) getUser())) {
             throw new AccessDeniedException("You don't have the right to write duplicates");
+        }
+        if(!canMerge()){
+            this.addError( MESSAGE_MERGE_DUPLICATES_FORBIDDEN, getLocale( ) );
+            _identityToKeep = null;
+            _identityToMerge = null;
+            return this.getSelectIdentities( request );
         }
         if ( _identityToKeep == null || _identityToMerge == null || _identityToMerge.equals( _identityToKeep ) )
         {
@@ -559,7 +561,7 @@ public class IdentityDuplicateJspBean extends AbstractIdentityDuplicateJspBean
      */
     @Action( ACTION_EXCLUDE_DUPLICATE )
     public String doExcludeDuplicate( final HttpServletRequest request ) throws AccessDeniedException {
-        if(!_canExclude) {
+        if(!canExclude()) {
             throw new AccessDeniedException("You don't have the right to exclude duplicates");
         }
         final String cuidToExclude = request.getParameter( PARAMETER_CUID_TO_EXCLUDE );
@@ -636,19 +638,19 @@ public class IdentityDuplicateJspBean extends AbstractIdentityDuplicateJspBean
      */
     @Action(ACTION_CREATE_IDENTITY_MERGE_TASK)
     public String doCreateIdentityMergeTask(final HttpServletRequest request) throws AccessDeniedException, IdentityStoreException {
-        if(!_canNotify) {
+        if(!RBACService.isAuthorized( new AccessDuplicateResource( ), AccessDuplicateResource.PERMISSION_NOTIFICATION, ( User ) this.getUser( ) )) {
             throw new AccessDeniedException("You don't have the right to create a notification task");
         }
-        if(!_ruleAllowingNotify) {
-            throw new AccessDeniedException("Creation of a notification task denied : the rule that has detected those duplicates doesn't allow it");
+        if(!canCreateMergeTask()) {
+            this.addError( MESSAGE_CREATE_TASK_FORBIDDEN, getLocale( ) );
+            return getResolveDuplicates( request );
         }
         final String customerId = request.getParameter( Constants.PARAM_ID_CUSTOMER );
         final String secondCuId = request.getParameter( Constants.METADATA_ACCOUNT_MERGE_SECOND_CUID );
         final boolean firstConnected = Boolean.parseBoolean( request.getParameter( Constants.PARAM_IS_IDENTITTY_TO_KEEP_CONNECTED ) );
         final boolean secondConnected = Boolean.parseBoolean( request.getParameter( Constants.PARAM_IS_IDENTITTY_TO_MERGE_CONNECTED ) );
 
-        final String taskType = firstConnected && !secondConnected ?
-                IdentityTaskType.ACCOUNT_IDENTITY_MERGE_REQUEST.name() : IdentityTaskType.ACCOUNT_MERGE_REQUEST.name();
+        final String taskType = getTaskTypeForTaskCreation();
         try
         {
             final IdentityTaskCreateRequest identityTaskCreateRequest = new IdentityTaskCreateRequest( );
@@ -683,9 +685,18 @@ public class IdentityDuplicateJspBean extends AbstractIdentityDuplicateJspBean
         return getResolveDuplicates( request );
     }
 
+    /**
+     * Verify if any task has been already created for the current identities, and takes the last one.
+     * @throws IdentityStoreException
+     */
     private void verifyExistingTasks( ) throws IdentityStoreException
     {
         _lastNotif = null;
+        if( !canCreateMergeTask() )
+        {
+            // Si on ne peut pas créer de tâche pour les identités courantes, inutile de vérifier les tâches existantes
+            return;
+        }
         final IdentityTaskListGetResponse response =
                 _serviceIdentity.getIdentityTaskList(_identityToKeep.getCustomerId(), IdentityResourceType.CUID.name( ), _currentClientCode, this.buildAgentAuthor( ) );
         if ( response != null )
@@ -693,8 +704,7 @@ public class IdentityDuplicateJspBean extends AbstractIdentityDuplicateJspBean
             final List<IdentityTaskDto> tasks = response.getTasks();
             if ( tasks != null && !tasks.isEmpty( ) )
             {
-                final String taskType = _identityToKeep.isMonParisActive() && !_identityToMerge.isMonParisActive() ?
-                                        IdentityTaskType.ACCOUNT_IDENTITY_MERGE_REQUEST.name() : IdentityTaskType.ACCOUNT_MERGE_REQUEST.name();
+                final String taskType = getTaskTypeForTaskCreation();
                 final List<IdentityTaskDto> filteredTasks = tasks.stream()
                              .filter(t -> t.getTaskStatus() == IdentityTaskStatusType.TODO || t.getTaskStatus() == IdentityTaskStatusType.IN_PROGRESS)
                              .filter(t -> t.getMetadata().containsKey(Constants.METADATA_ACCOUNT_MERGE_SECOND_CUID) && t.getMetadata().get(Constants.METADATA_ACCOUNT_MERGE_SECOND_CUID).equals(_identityToMerge.getCustomerId()))
@@ -734,5 +744,56 @@ public class IdentityDuplicateJspBean extends AbstractIdentityDuplicateJspBean
         model.put( MARK_RULE_BY_IDENTITY, _ruleBySuspiciousIdentity);
 
         return model;
+    }
+
+    /**
+     * Does the user have the permission to exclude 2 duplicates
+     */
+    private boolean canExclude() {
+        return RBACService.isAuthorized( new AccessDuplicateResource( ), AccessDuplicateResource.PERMISSION_EXCLUDE, ( User ) this.getUser( ) );
+    }
+
+    /**
+     * Does the user have the permission to merge 2 duplicates and can the 2 identities be merged
+     */
+    private boolean canMerge() {
+        return RBACService.isAuthorized(new AccessDuplicateResource(), AccessDuplicateResource.PERMISSION_WRITE, (User) getUser())
+            && !_identityToKeep.isMonParisActive()
+            && !_identityToMerge.isMonParisActive();
+    }
+
+    /**
+     * Can a merge task be created for the 2 identities
+     */
+    private boolean canCreateMergeTask() {
+        // RBAC
+        if(!RBACService.isAuthorized( new AccessDuplicateResource( ), AccessDuplicateResource.PERMISSION_NOTIFICATION, ( User ) this.getUser( ) )) {
+            return false;
+        }
+        // L'identité à conserver doit être connectée :
+        // - si les deux identités ne sont pas connectée, le merge est possible => pas de création de tâche
+        // - si l'identité à conserver n'est pas connectée mais que l'autre l'est, alors il faut faire un swap
+        if(!_identityToKeep.isMonParisActive()) {
+            return false;
+        }
+        // L'identité à rapprocher n'est pas connectée mais ne peut pas être notifiée (pas de mail de contact ou certif trop faible)
+        if(!_identityToMerge.isMonParisActive() && (!_mediationService.canSendEmail( _identityToMerge ) || !_mediationService.validateIdentityCertification( _identityToMerge ))) {
+            return false;
+        }
+        // La règle ayant détecté ces doublons n'est pas dans la liste définie en properties
+        if (_rulesAllowingTaskCreation.stream().noneMatch(rule -> _currentRuleCode.equalsIgnoreCase(rule))) {
+            return false;
+        }
+
+        // Tous les tests sont passés, on peut créer une tache de type merge
+        return true;
+    }
+
+    /**
+     * Calculates what task type must be put for creating a task for the current identities.
+     */
+    private String getTaskTypeForTaskCreation() {
+        return (_identityToKeep.isMonParisActive() && _identityToMerge.isMonParisActive()) ? IdentityTaskType.ACCOUNT_MERGE_REQUEST.name() :
+               (_identityToKeep.isMonParisActive() && !_identityToMerge.isMonParisActive()) ? IdentityTaskType.ACCOUNT_IDENTITY_MERGE_REQUEST.name() : null;
     }
 }
