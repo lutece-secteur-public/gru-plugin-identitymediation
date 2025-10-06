@@ -3,18 +3,7 @@ package fr.paris.lutece.plugins.identitymediation.buisness;
 import fr.paris.lutece.plugins.identitystore.v3.web.rs.dto.common.IdentityDto;
 
 public class LocalIdentityDto extends IdentityDto {
-    private boolean canNotify;
     private boolean locked;
-
-    public boolean isCanNotify( )
-    {
-        return canNotify;
-    }
-
-    public void setCanNotify( boolean canNotify )
-    {
-        this.canNotify = canNotify;
-    }
 
     public boolean isLocked()
     {

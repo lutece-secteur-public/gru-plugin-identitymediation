@@ -433,9 +433,7 @@ public class AbstractIdentityDuplicateJspBean extends MVCAdminJspBean {
             {
                 if ( identityResponse.getIdentities( ).size( ) == 1 )
                 {
-                    LocalIdentityDto localIdentityDto = LocalIdentityDto.toLocalIdentityDto(identityResponse.getIdentities().get(0));
-                    localIdentityDto.setCanNotify( _mediationService.canSendEmail( localIdentityDto ) && _mediationService.validateIdentityCertification( localIdentityDto ) );
-                    return localIdentityDto;
+                    return LocalIdentityDto.toLocalIdentityDto(identityResponse.getIdentities().get(0));
                 }
             }
             else
@@ -458,9 +456,7 @@ public class AbstractIdentityDuplicateJspBean extends MVCAdminJspBean {
                 this.buildAgentAuthor( ) );
         if ( _mediationService.isSuccess( response ) && !response.getIdentities( ).isEmpty( ) )
         {
-            return response.getIdentities( ).stream().map( LocalIdentityDto::toLocalIdentityDto )
-                    .peek( localIdentityDto -> localIdentityDto.setCanNotify( _mediationService.canSendEmail( localIdentityDto ) && _mediationService.validateIdentityCertification( localIdentityDto ) ) )
-                    .collect( Collectors.toList( ) );
+            return response.getIdentities( ).stream().map( LocalIdentityDto::toLocalIdentityDto ).collect( Collectors.toList( ) );
         }
         if ( showError ) {
             this.logAndDisplayStatusErrorMessage( response );

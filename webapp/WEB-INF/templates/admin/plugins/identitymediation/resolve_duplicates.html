@@ -10,22 +10,18 @@
     <@pageColumn id="mediation-resolve" class="pt-xl-4 px-xl-5 bg-secondary ">
         <div class="container">
             <@pageHeader title="#i18n{identitymediation.resolve_duplicates.pageTitle}">
-                <#if can_merge && !identity_to_keep.monParisActive && !identity_to_merge.monParisActive>
+                <#if can_merge>
                     <button id="merge-btn" type="button" class="btn btn-primary" data-bs-toggle="modal"
                             data-bs-target="#merge-modal">
                         #i18n{identitymediation.resolve_duplicates.buttonMergeDuplicate}
                     </button>
-                <#else>
-                    <span class="d-inline-block" tabindex="0" data-bs-toggle="tooltip" data-bs-placement="bottom" data-bs-html="true" title="<small>#i18n{identitymediation.resolve_duplicates.buttonMergeDuplicate.forbidden}</small>">
-                        <button class="btn btn-primary" type="button" disabled>
-                            #i18n{identitymediation.resolve_duplicates.buttonMergeDuplicate}
-                        </button>
-                    </span>
                 </#if>
-                <button id="exclude-btn" type="button" class="btn btn-danger" data-bs-toggle="modal"
-                        data-bs-target="#exclude-modal" <#if !can_exclude> disabled </#if> >
+                <#if can_exclude>
+                    <button id="exclude-btn" type="button" class="btn btn-danger" data-bs-toggle="modal"
+                            data-bs-target="#exclude-modal">
                         <i class="ti ti-x"></i> #i18n{identitymediation.resolve_duplicates.buttonExcludeDuplicate}
-                </button>
+                    </button>
+                </#if>
                 <#if !only_one >
                     <@aButton
                             href='jsp/admin/plugins/identitymediation/IdentityDuplicate.jsp?action=cancel&cuid=${identity_to_keep.customerId}&code=${current_rule_code}&page=${current_page}&family_name=${family_name!""}&first_name=${first_name!""}&birthdate=${birthdate!""}'
@@ -36,24 +32,16 @@
             <@messages infos=infos />
             <@messages errors=errors />
             <@messages warnings=warnings />
-            <#if !can_merge || identity_to_keep.monParisActive || identity_to_merge.monParisActive>
-            <div class="alert alert-warning mt-2" role="alert">
-                <h3>#i18n{identitymediation.resolve_duplicates.alertMonParis.title}</h3>
-                <p class="m-0 text-body">#i18n{identitymediation.resolve_duplicates.alertMonParis.description}
-                    <!-- Le user n'a pas les droits de notification -->
-                    <#if !can_notify>
-                        <p>#i18n{identitymediation.resolve_duplicates.cannotNotifyUsers.rights}</p>
-                    <!-- Une des deux identités n'est pas connectée mais neut peut pas être notifiée (pas de mail de contact ou certif trop faible) -->
-                    <#elseif (!identity_to_keep.monParisActive && !identity_to_keep.canNotify) || (!identity_to_merge.monParisActive && !identity_to_merge.canNotify)>
-                        <p>#i18n{identitymediation.resolve_duplicates.cannotNotifyUsers}</p>
-                    <!-- On peut notifier -->
-                    <#else>
+            <#if can_create_task>
+                <div class="alert alert-warning mt-2" role="alert">
+                    <h3>#i18n{identitymediation.resolve_duplicates.alertMonParis.title}</h3>
+                    <p class="m-0 text-body">
+                        #i18n{identitymediation.resolve_duplicates.alertMonParis.description}
                         <a id="notify-btn" role="button" class="text-warning" data-bs-toggle="modal" data-bs-target="#notify-modal">
                             #i18n{identitymediation.resolve_duplicates.buttonNotifyUsers}
                         </a>
-                    </#if>
-                </p>
-            </div>
+                    </p>
+                </div>
             </#if>
             <#if service_contract??>
                 <div id="lutece-compare" class="row mt-4 position-relative shadow rounded-5 mx-1">
