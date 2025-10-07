@@ -32,14 +32,18 @@
             <@messages infos=infos />
             <@messages errors=errors />
             <@messages warnings=warnings />
-            <#if can_create_task>
+            <#if !can_merge && has_right_create_task>
                 <div class="alert alert-warning mt-2" role="alert">
                     <h3>#i18n{identitymediation.resolve_duplicates.alertMonParis.title}</h3>
                     <p class="m-0 text-body">
                         #i18n{identitymediation.resolve_duplicates.alertMonParis.description}
-                        <a id="notify-btn" role="button" class="text-warning" data-bs-toggle="modal" data-bs-target="#notify-modal">
-                            #i18n{identitymediation.resolve_duplicates.buttonNotifyUsers}
-                        </a>
+                        <#if can_create_c2c_task || can_create_i2c_task>
+                            <a id="notify-btn" role="button" class="text-warning" data-bs-toggle="modal" data-bs-target="#notify-modal">
+                                #i18n{identitymediation.resolve_duplicates.buttonNotifyUsers}
+                            </a>
+                        <#else>
+                            #i18n{identitymediation.resolve_duplicates.cannotNotifyUsers}
+                        </#if>
                     </p>
                 </div>
             </#if>

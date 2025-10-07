@@ -153,7 +153,9 @@ public class IdentityDuplicateJspBean extends AbstractIdentityDuplicateJspBean
     protected static final String MARK_CUID = "cuid";
     protected static final String MARK_CODE = "code";
     protected static final String MARK_CAN_EXCLUDE = "can_exclude";
-    protected static final String MARK_CAN_CREATE_TASK = "can_create_task";
+    protected static final String MARK_HAS_RIGHT_CREATE_TASK =  "has_right_create_task";
+    protected static final String MARK_CAN_CREATE_C2C_TASK = "can_create_c2c_task";
+    protected static final String MARK_CAN_CREATE_I2C_TASK = "can_create_i2c_task";
     protected static final String MARK_CAN_MERGE = "can_merge";
     protected static final String MARK_LAST_NOTIF = "last_notif";
 
@@ -437,7 +439,9 @@ public class IdentityDuplicateJspBean extends AbstractIdentityDuplicateJspBean
         model.put( MARK_CODE, code );
         model.put( MARK_IDENTITY_TO_KEEP, _identityToKeep );
         model.put( MARK_IDENTITY_TO_MERGE, _identityToMerge );
-        model.put( MARK_CAN_CREATE_TASK, canCreateMergeTask());
+        model.put( MARK_HAS_RIGHT_CREATE_TASK, hasRightToCreateMergeTask() );
+        model.put( MARK_CAN_CREATE_C2C_TASK, canCreateTaskC2C() );
+        model.put( MARK_CAN_CREATE_I2C_TASK, canCreateTaskI2C() );
         model.put( MARK_CAN_EXCLUDE, canExclude());
         model.put( MARK_CAN_MERGE, canMerge() );
         model.put( MARK_LAST_NOTIF, _lastNotif );
@@ -471,7 +475,9 @@ public class IdentityDuplicateJspBean extends AbstractIdentityDuplicateJspBean
         model.put( MARK_CODE, code );
         model.put( MARK_IDENTITY_TO_KEEP, _identityToKeep );
         model.put( MARK_IDENTITY_TO_MERGE, _identityToMerge );
-        model.put( MARK_CAN_CREATE_TASK, canCreateMergeTask());
+        model.put( MARK_HAS_RIGHT_CREATE_TASK, hasRightToCreateMergeTask() );
+        model.put( MARK_CAN_CREATE_C2C_TASK, canCreateTaskC2C() );
+        model.put( MARK_CAN_CREATE_I2C_TASK, canCreateTaskI2C() );
         model.put( MARK_CAN_EXCLUDE, canExclude());
         model.put( MARK_CAN_MERGE, canMerge() );
         model.put( MARK_LAST_NOTIF, _lastNotif );
@@ -638,17 +644,15 @@ public class IdentityDuplicateJspBean extends AbstractIdentityDuplicateJspBean
      */
     @Action(ACTION_CREATE_IDENTITY_MERGE_TASK)
     public String doCreateIdentityMergeTask(final HttpServletRequest request) throws AccessDeniedException, IdentityStoreException {
-        if(!RBACService.isAuthorized( new AccessDuplicateResource( ), AccessDuplicateResource.PERMISSION_NOTIFICATION, ( User ) this.getUser( ) )) {
+        if(!hasRightToCreateMergeTask()) {
             throw new AccessDeniedException("You don't have the right to create a notification task");
         }
-        if(!canCreateMergeTask()) {
+        if(!canCreateTaskC2C() && !canCreateTaskI2C()) {
             this.addError( MESSAGE_CREATE_TASK_FORBIDDEN, getLocale( ) );
             return getResolveDuplicates( request );
         }
         final String customerId = request.getParameter( Constants.PARAM_ID_CUSTOMER );
         final String secondCuId = request.getParameter( Constants.METADATA_ACCOUNT_MERGE_SECOND_CUID );
-        final boolean firstConnected = Boolean.parseBoolean( request.getParameter( Constants.PARAM_IS_IDENTITTY_TO_KEEP_CONNECTED ) );
-        final boolean secondConnected = Boolean.parseBoolean( request.getParameter( Constants.PARAM_IS_IDENTITTY_TO_MERGE_CONNECTED ) );
 
         final String taskType = getTaskTypeForTaskCreation();
         try
@@ -692,7 +696,7 @@ public class IdentityDuplicateJspBean extends AbstractIdentityDuplicateJspBean
     private void verifyExistingTasks( ) throws IdentityStoreException
     {
         _lastNotif = null;
-        if( !canCreateMergeTask() )
+        if( !canCreateTaskC2C() && !canCreateTaskI2C() )
         {
             // Si on ne peut pas créer de tâche pour les identités courantes, inutile de vérifier les tâches existantes
             return;
@@ -763,30 +767,33 @@ public class IdentityDuplicateJspBean extends AbstractIdentityDuplicateJspBean
     }
 
     /**
-     * Can a merge task be created for the 2 identities
+     * Does the user have the permission to create a merge task
      */
-    private boolean canCreateMergeTask() {
-        // RBAC
-        if(!RBACService.isAuthorized( new AccessDuplicateResource( ), AccessDuplicateResource.PERMISSION_NOTIFICATION, ( User ) this.getUser( ) )) {
-            return false;
-        }
-        // L'identité à conserver doit être connectée :
-        // - si les deux identités ne sont pas connectée, le merge est possible => pas de création de tâche
-        // - si l'identité à conserver n'est pas connectée mais que l'autre l'est, alors il faut faire un swap
-        if(!_identityToKeep.isMonParisActive()) {
-            return false;
-        }
-        // L'identité à rapprocher n'est pas connectée mais ne peut pas être notifiée (pas de mail de contact ou certif trop faible)
-        if(!_identityToMerge.isMonParisActive() && (!_mediationService.canSendEmail( _identityToMerge ) || !_mediationService.validateIdentityCertification( _identityToMerge ))) {
-            return false;
-        }
-        // La règle ayant détecté ces doublons n'est pas dans la liste définie en properties
-        if (_rulesAllowingTaskCreation.stream().noneMatch(rule -> _currentRuleCode.equalsIgnoreCase(rule))) {
-            return false;
-        }
+    private boolean hasRightToCreateMergeTask() {
+        return RBACService.isAuthorized( new AccessDuplicateResource( ), AccessDuplicateResource.PERMISSION_NOTIFICATION, ( User ) this.getUser( ) );
+    }
 
-        // Tous les tests sont passés, on peut créer une tache de type merge
-        return true;
+    /**
+     * Can a C2C merge task be created for the 2 identities.<br/>
+     * - Both identities need to be MonParis connected<br/>
+     * - The rule that detected the potential duplicates needs to be present in the list in property <code>identitymediation.merge.rule.codes.for.create.task</code>
+     */
+    private boolean canCreateTaskC2C() {
+        return _identityToKeep.isMonParisActive() && _identityToMerge.isMonParisActive() &&
+               _rulesAllowingTaskCreation.stream().anyMatch(rule -> _currentRuleCode.equalsIgnoreCase(rule));
+    }
+
+    /**
+     * Can a I2C merge task be created for the 2 identities.<br/>
+     * - Identity to keep needs to be MonParis connected<br/>
+     * - Identity to merge needs to be MonParis unconnected<br/>
+     * - Identity to merge needs to have a contact email and have the necessary certification levels<br/>
+     * - The rule that detected the potential duplicates needs to be present in the list in property <code>identitymediation.merge.rule.codes.for.create.task</code>
+     */
+    private boolean canCreateTaskI2C() {
+        return _identityToKeep.isMonParisActive() && !_identityToMerge.isMonParisActive() &&
+               _mediationService.canSendEmail( _identityToMerge ) && _mediationService.validateIdentityCertification( _identityToMerge ) &&
+               _rulesAllowingTaskCreation.stream().anyMatch(rule -> _currentRuleCode.equalsIgnoreCase(rule));
     }
 
     /**
