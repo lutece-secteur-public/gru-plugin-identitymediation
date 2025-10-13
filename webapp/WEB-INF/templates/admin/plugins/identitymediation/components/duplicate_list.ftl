@@ -51,10 +51,10 @@
                       <@tag color="primary"><strong>${duplicatesToMergeAttributesSize}</strong> #i18n{identitymediation.search_duplicates.status.selection}</@tag>
                     <#elseif  duplicatesToMergeAttributesSize == 1 >
                       <#assign firstKey = mediation_identity.duplicatesToMergeAttributes?keys[0]>
-                      <#if firstKey.monParisActive >
-                        <@tag color="warning">#i18n{identitymediation.search_duplicates.status.notification}</@tag>
-                      <#else>
+                      <#if !mediation_identity.suspiciousIdentity.monParisActive && !firstKey.monParisActive>
                         <@tag color="warning">#i18n{identitymediation.search_duplicates.status.merge}</@tag>
+                      <#else>
+                        <@tag color="warning">#i18n{identitymediation.search_duplicates.status.notification}</@tag>
                       </#if>
                     <#else>
                       <@tag color="success">#i18n{identitymediation.search_duplicates.status.empty}</@tag>
