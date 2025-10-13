@@ -788,12 +788,10 @@ public class IdentityDuplicateJspBean extends AbstractIdentityDuplicateJspBean
      * - Identity to keep needs to be MonParis connected<br/>
      * - Identity to merge needs to be MonParis unconnected<br/>
      * - Identity to merge needs to have a contact email and have the necessary certification levels<br/>
-     * - The rule that detected the potential duplicates needs to be present in the list in property <code>identitymediation.merge.rule.codes.for.create.task</code>
      */
     private boolean canCreateTaskI2C() {
         return _identityToKeep.isMonParisActive() && !_identityToMerge.isMonParisActive() &&
-               _mediationService.canSendEmail( _identityToMerge ) && _mediationService.validateIdentityCertification( _identityToMerge ) &&
-               _rulesAllowingTaskCreation.stream().anyMatch(rule -> _currentRuleCode.equalsIgnoreCase(rule));
+               _mediationService.canSendEmail( _identityToMerge ) && _mediationService.validateIdentityCertification( _identityToMerge );
     }
 
     /**
