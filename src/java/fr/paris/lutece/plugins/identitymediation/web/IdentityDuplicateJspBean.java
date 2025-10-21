@@ -365,8 +365,8 @@ public class IdentityDuplicateJspBean extends AbstractIdentityDuplicateJspBean
      */
     @View( value = VIEW_RESOLVE_DUPLICATES )
     public String getResolveDuplicates( final HttpServletRequest request ) throws AccessDeniedException, IdentityStoreException {
-        if( !RBACService.isAuthorized( new AccessDuplicateResource( ), AccessDuplicateResource.PERMISSION_WRITE, ( User ) getUser( ) ) ) {
-            throw new AccessDeniedException("You don't have the right to write duplicates");
+        if( !RBACService.isAuthorized( new AccessDuplicateResource( ), AccessDuplicateResource.PERMISSION_READ, ( User ) getUser( ) ) ) {
+            throw new AccessDeniedException("You don't have the right to view duplicates");
         }
         final String _suspiciousCuid = request.getParameter( MARK_CUID );
         final String code = request.getParameter(Constants.PARAM_RULE_CODE);
