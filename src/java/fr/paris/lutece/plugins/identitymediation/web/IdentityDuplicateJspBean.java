@@ -84,7 +84,6 @@ public class IdentityDuplicateJspBean extends AbstractIdentityDuplicateJspBean
     // Messages
     protected static final String MESSAGE_CHOOSE_DUPLICATE_TYPE_ERROR = "identitymediation.message.choose_duplicate_type.error";
     protected static final String MESSAGE_GET_IDENTITY_ERROR = "identitymediation.message.get_identity.error";
-    protected static final String MESSAGE_LOCK_IDENTITY_ERROR = "identitymediation.message.lock_identity.error";
     protected static final String MESSAGE_UNLOCK_IDENTITY_ERROR = "identitymediation.message.unlock_identity.error";
     protected static final String MESSAGE_SELECT_IDENTITIES_ERROR = "identitymediation.message.select_identities.error";
     protected static final String MESSAGE_FETCH_DUPLICATES_ERROR = "identitymediation.message.fetch_duplicates.error";
@@ -427,7 +426,6 @@ public class IdentityDuplicateJspBean extends AbstractIdentityDuplicateJspBean
         }
         catch( final IdentityStoreException e )
         {
-            this.addError( MESSAGE_LOCK_IDENTITY_ERROR, getLocale( ) );
             this.addError( e.getMessage( ) );
             return this.getSearchDuplicates( request );
         }
