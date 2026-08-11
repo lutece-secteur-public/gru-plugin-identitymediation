@@ -126,6 +126,7 @@ public class IdentityDuplicateJspBean extends AbstractIdentityDuplicateJspBean
 
     // Properties
     protected static final String PROPERTY_MERGE_RULE_CODES_FOR_CREATE_TASK = "identitymediation.merge.rule.codes.for.create.task";
+    protected static final String PROPERTY_MERGE_RULE_CODES_FOR_MERGE = "identitymediation.merge.rule.codes.for.merge";
 
     // Parameters
     protected final String PARAMETER_CUID_PINNED = "cuid_pinned";
@@ -157,8 +158,10 @@ public class IdentityDuplicateJspBean extends AbstractIdentityDuplicateJspBean
     protected static final String MARK_CAN_CREATE_I2C_TASK = "can_create_i2c_task";
     protected static final String MARK_CAN_MERGE = "can_merge";
     protected static final String MARK_LAST_NOTIF = "last_notif";
+    protected static final String MARK_BOTH_IDENTITIES_UNCONNECTED = "both_identities_unconnected";
 
     private final List<String> _rulesAllowingTaskCreation = Arrays.stream(AppPropertiesService.getProperty(PROPERTY_MERGE_RULE_CODES_FOR_CREATE_TASK).split(",")).collect(Collectors.toList());
+    private final List<String> _rulesAllowingMerge = Arrays.stream(AppPropertiesService.getProperty(PROPERTY_MERGE_RULE_CODES_FOR_MERGE).split(",")).collect(Collectors.toList());
     private IdentityTaskDto _lastNotif = null;
 
     /**
@@ -442,6 +445,7 @@ public class IdentityDuplicateJspBean extends AbstractIdentityDuplicateJspBean
         model.put( MARK_CAN_CREATE_I2C_TASK, canCreateTaskI2C() );
         model.put( MARK_CAN_EXCLUDE, canExclude());
         model.put( MARK_CAN_MERGE, canMerge() );
+        model.put( MARK_BOTH_IDENTITIES_UNCONNECTED, areBothIdentitiesUnconnected( ) );
         model.put( MARK_LAST_NOTIF, _lastNotif );
         model.put( PARAMETER_ONLY_ONE_DUPLICATE, onlyOneDuplicate );
         Arrays.asList( PARAMETERS_DUPLICATE_SEARCH ).forEach( searchKey -> model.put( searchKey, request.getParameter( searchKey ) ) );
@@ -478,6 +482,7 @@ public class IdentityDuplicateJspBean extends AbstractIdentityDuplicateJspBean
         model.put( MARK_CAN_CREATE_I2C_TASK, canCreateTaskI2C() );
         model.put( MARK_CAN_EXCLUDE, canExclude());
         model.put( MARK_CAN_MERGE, canMerge() );
+        model.put( MARK_BOTH_IDENTITIES_UNCONNECTED, areBothIdentitiesUnconnected( ) );
         model.put( MARK_LAST_NOTIF, _lastNotif );
         model.put( PARAMETER_ONLY_ONE_DUPLICATE, onlyOneDuplicate );
 
@@ -760,8 +765,15 @@ public class IdentityDuplicateJspBean extends AbstractIdentityDuplicateJspBean
      */
     private boolean canMerge() {
         return RBACService.isAuthorized(new AccessDuplicateResource(), AccessDuplicateResource.PERMISSION_WRITE, (User) getUser())
-            && !_identityToKeep.isMonParisActive()
-            && !_identityToMerge.isMonParisActive();
+            && this.areBothIdentitiesUnconnected()
+            && _rulesAllowingMerge.stream().anyMatch(rule -> _currentRuleCode.equalsIgnoreCase(rule));
+    }
+
+    /**
+     * Are the 2 identities both unconnected (Mon Paris NOT active)
+     */
+    private boolean areBothIdentitiesUnconnected() {
+        return !_identityToKeep.isMonParisActive() && !_identityToMerge.isMonParisActive();
     }
 
     /**

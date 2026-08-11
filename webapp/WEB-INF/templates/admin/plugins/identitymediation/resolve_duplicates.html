@@ -32,7 +32,7 @@
             <@messages infos=infos />
             <@messages errors=errors />
             <@messages warnings=warnings />
-            <#if !can_merge && has_right_create_task>
+            <#if !can_merge && has_right_create_task && !both_identities_unconnected>
                 <div class="alert alert-warning mt-2" role="alert">
                     <h3>#i18n{identitymediation.resolve_duplicates.alertMonParis.title}</h3>
                     <p class="m-0 text-body">

@@ -45,7 +45,7 @@
                       </#if>
                     </h3>
                   <div>
-                    <#if mediation_identity.duplicatesToMergeAttributes??>
+                  <#if mediation_identity.duplicatesToMergeAttributes??>
                     <#assign duplicatesToMergeAttributesSize = mediation_identity.duplicatesToMergeAttributes?size />
                     <#if duplicatesToMergeAttributesSize gt 1>
                       <@tag color="primary"><strong>${duplicatesToMergeAttributesSize}</strong> #i18n{identitymediation.search_duplicates.status.selection}</@tag>
@@ -53,8 +53,10 @@
                       <#assign firstKey = mediation_identity.duplicatesToMergeAttributes?keys[0]>
                       <#if !mediation_identity.suspiciousIdentity.monParisActive && !firstKey.monParisActive>
                         <@tag color="warning">#i18n{identitymediation.search_duplicates.status.merge}</@tag>
+                      <#elseif mediation_identity.suspiciousIdentity.monParisActive && firstKey.monParisActive>
+                        <@tag color="warning">#i18n{identitymediation.search_duplicates.status.notification.two.accounts}</@tag>
                       <#else>
-                        <@tag color="warning">#i18n{identitymediation.search_duplicates.status.notification}</@tag>
+                        <@tag color="warning">#i18n{identitymediation.search_duplicates.status.notification.one.account}</@tag>
                       </#if>
                     <#else>
                       <@tag color="success">#i18n{identitymediation.search_duplicates.status.empty}</@tag>
