@@ -584,25 +584,18 @@ public class AbstractIdentityDuplicateJspBean extends MVCAdminJspBean {
         final List<LocalIdentityDto> identitiesCopy = new ArrayList<>( identities );
         for ( final LocalIdentityDto suspiciousIdentity : identitiesCopy )
         {
-            boolean locked = suspiciousIdentity.isLocked();
-            final List<LocalIdentityDto> duplicateList = new ArrayList<>( this.fetchPotentialDuplicates( suspiciousIdentity, currentRuleCode, true ) );
-            duplicateList.add( suspiciousIdentity );
-            duplicateList.sort( Comparator.comparing(o -> o.getQuality( ).getQuality( ), Comparator.reverseOrder( ) ) );
-            final LocalIdentityDto bestIdentity = duplicateList.get( 0 );
-
             final MediationIdentity mediationIdentity = new MediationIdentity( );
             mediationIdentity.setSuspiciousIdentity( suspiciousIdentity );
-            mediationIdentity.setBestIdentity( bestIdentity );
+            mediationIdentity.setLocked( suspiciousIdentity.isLocked( ) );
             mediationIdentity.setDuplicatesToMergeAttributes( new HashMap<>( ) );
+
+            final List<LocalIdentityDto> duplicateList = this.fetchPotentialDuplicates( suspiciousIdentity, currentRuleCode, true );
+            this.sortByQuality( duplicateList );
 
             for ( final LocalIdentityDto duplicate : duplicateList )
             {
-
-                if ( duplicate.equals( bestIdentity ) )
-                    continue;
-
                 final List<String> attrToMergeList = mediationIdentity.getDuplicatesToMergeAttributes( ).computeIfAbsent( duplicate, k -> new ArrayList<>( ) );
-                for ( final AttributeDto attrToKeep : bestIdentity.getAttributes( ) )
+                for ( final AttributeDto attrToKeep : suspiciousIdentity.getAttributes( ) )
                 {
                     for ( final AttributeDto attrToMerge : duplicate.getAttributes( ) )
                     {
@@ -614,7 +607,6 @@ public class AbstractIdentityDuplicateJspBean extends MVCAdminJspBean {
                     }
                 }
             }
-            mediationIdentity.setLocked(locked);
 
             listIdentityToMerge.add( mediationIdentity );
         }

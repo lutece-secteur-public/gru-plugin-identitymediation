@@ -39,7 +39,6 @@ import java.util.Map;
 public class MediationIdentity
 {
     private LocalIdentityDto suspiciousIdentity;
-    private LocalIdentityDto bestIdentity;
     private Map<LocalIdentityDto, List<String>> duplicatesToMergeAttributes;
     private boolean locked = false;
 
@@ -51,16 +50,6 @@ public class MediationIdentity
     public void setSuspiciousIdentity( LocalIdentityDto suspiciousIdentity )
     {
         this.suspiciousIdentity = suspiciousIdentity;
-    }
-
-    public LocalIdentityDto getBestIdentity( )
-    {
-        return bestIdentity;
-    }
-
-    public void setBestIdentity( LocalIdentityDto bestIdentity )
-    {
-        this.bestIdentity = bestIdentity;
     }
 
     public Map<LocalIdentityDto, List<String>> getDuplicatesToMergeAttributes( )
